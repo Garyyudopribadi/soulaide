@@ -3,7 +3,7 @@ export type PresenceStatus = 'offline' | 'online' | 'available' | 'busy' | 'away
 export interface ChatMessage {
   id: string;
   conversation_id: string;
-  sender_id: string;
+  sender_id: string | null;
   content: string;
   is_read: boolean;
   created_at: string;

@@ -12,7 +12,7 @@ import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage.tsx'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage.tsx'
 import { UnauthorizedPage } from '@/features/auth/UnauthorizedPage.tsx'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute.tsx'
-import { BookingPage } from '@/features/booking/BookingPage.tsx'
+import { AssistantBookingPage } from '@/features/client-chat/AssistantBookingPage.tsx'
 import { CustomerDashboardPage } from '@/features/customer/CustomerDashboardPage.tsx'
 import { PsychologistDashboardPage } from '@/features/psychologist/PsychologistDashboardPage.tsx'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage.tsx'
@@ -34,7 +34,7 @@ export const router = createBrowserRouter([
       { path: 'forgot-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'unauthorized', element: <UnauthorizedPage /> },
-      { path: 'booking', element: <BookingPage /> },
+      { path: 'booking', element: <AssistantBookingPage /> },
       {
         path: 'dashboard/*',
         element: (

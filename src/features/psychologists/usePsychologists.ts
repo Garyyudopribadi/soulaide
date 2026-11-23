@@ -49,6 +49,8 @@ export function usePsychologists() {
             profileImage: p.profile_image_url || '/Soulaide Psi Arc Logo.png',
             presence: presenceMap.get(p.id) ?? 'available',
             tier: isSenior ? ('Soul Expert' as const) : ('Soul Guidance' as const),
+            isBot: Boolean(p.is_bot),
+            userId: p.user_id ?? null,
           }
         })
       } catch {

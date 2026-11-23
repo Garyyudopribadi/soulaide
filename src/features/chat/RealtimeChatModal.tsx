@@ -52,12 +52,8 @@ export const RealtimeChatModal: React.FC<RealtimeChatModalProps> = ({ booking, o
     const initChat = async () => {
       try {
         setIsLoading(true);
-        // 1. Get or create conversation
-        const conv = await chatService.getOrCreateBookingConversation(
-          booking.id,
-          user.id,
-          booking.psychologist.id
-        );
+        // 1. Get or create the booking's coordination thread (server-side RPC)
+        const conv = await chatService.getOrCreateBookingConversation(booking.id);
 
         if (!isMounted) return;
         setConversationId(conv.id);

@@ -39,6 +39,8 @@ export interface PsychologistProfile {
   cardImage: string
   profileImage: string
   tier?: ProfessionalTier
+  isBot?: boolean
+  userId?: string | null
 }
 
 export interface ServiceDetail {

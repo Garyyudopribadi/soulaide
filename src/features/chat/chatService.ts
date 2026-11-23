@@ -3,73 +3,36 @@ import type { ChatMessage, Conversation } from './types.ts';
 
 export const chatService = {
   /**
-   * Finds or creates a coordination conversation for a specific booking.
+   * Finds or creates the coordination thread for a booking via the
+   * Soulaide_open_booking_thread RPC. The RPC enforces access (client,
+   * assigned psychologist, admin) and registers participants with the
+   * correct auth uids, including psychologists without auth accounts.
    */
-  async getOrCreateBookingConversation(
-    bookingId: string,
-    clientUserId: string,
-    psychologistUserId: string
-  ): Promise<Conversation> {
-    // 1. Check existing conversation for this booking
-    const { data: existingConvs, error: findError } = await supabase
-      .from('Soulaide_conversations')
-      .select('id, booking_id, created_at, updated_at')
-      .eq('booking_id', bookingId)
-      .limit(1);
-
-    if (findError) {
-      console.warn('Error fetching conversation:', findError);
-    }
-
-    if (existingConvs && existingConvs.length > 0) {
-      const conv = existingConvs[0];
-      return {
-        id: conv.id,
-        booking_id: conv.booking_id,
-        created_at: conv.created_at,
-        updated_at: conv.updated_at,
-      };
-    }
-
-    // 2. Create new conversation
-    const { data: newConv, error: createError } = await supabase
-      .from('Soulaide_conversations')
-      .insert({ booking_id: bookingId })
-      .select()
-      .single();
-
-    if (createError || !newConv) {
-      throw new Error(`Gagal membuka kanal percakapan: ${createError?.message}`);
-    }
-
-    // 3. Register participants (Client & Psychologist)
-    const participantsToInsert = [
-      { conversation_id: newConv.id, user_id: clientUserId, role: 'client' },
-      { conversation_id: newConv.id, user_id: psychologistUserId, role: 'psychologist' },
-    ];
-
-    const { error: partError } = await supabase
-      .from('Soulaide_conversation_participants')
-      .insert(participantsToInsert);
-
-    if (partError) {
-      console.warn('Warning inserting participants:', partError);
-    }
-
-    // 4. Send initial system welcome message
-    await supabase.from('Soulaide_messages').insert({
-      conversation_id: newConv.id,
-      sender_id: clientUserId,
-      content:
-        '[Sistem Soulaide]: Kanal koordinasi pra-sesi telah aktif. Anda dapat mengonfirmasi kesiapan teknis atau tautan pertemuan sebelum sesi dimulai.',
-      is_read: true,
+  async getOrCreateBookingConversation(bookingId: string): Promise<Conversation> {
+    const { data, error } = await supabase.rpc('Soulaide_open_booking_thread', {
+      p_booking_id: bookingId,
     });
 
+    const result = data as { success?: boolean; conversation_id?: string; error?: string } | null;
+    if (error || !result?.success || !result.conversation_id) {
+      throw new Error(`Gagal membuka kanal percakapan: ${result?.error || error?.message || 'respons tidak valid'}`);
+    }
+
+    const { data: conv, error: convError } = await supabase
+      .from('Soulaide_conversations')
+      .select('id, booking_id, created_at, updated_at')
+      .eq('id', result.conversation_id)
+      .single();
+
+    if (convError || !conv) {
+      throw new Error(`Gagal memuat percakapan: ${convError?.message}`);
+    }
+
     return {
-      id: newConv.id,
-      booking_id: newConv.booking_id,
-      created_at: newConv.created_at,
-      updated_at: newConv.updated_at,
+      id: conv.id,
+      booking_id: conv.booking_id,
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
     };
   },
 

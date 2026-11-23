@@ -78,6 +78,7 @@ export const PsychologistDashboardPage: React.FC = () => {
     const adapted: CustomerBookingRecord = {
       id: booking.id,
       bookingCode: booking.booking_code,
+      customerId: booking.customer_id,
       sessionDate: booking.session_date,
       sessionStartTime: booking.session_start_time,
       sessionEndTime: booking.session_end_time,
@@ -99,6 +100,8 @@ export const PsychologistDashboardPage: React.FC = () => {
         fullName: psychologistProfile?.full_name || 'Psikolog',
         credentials: psychologistProfile?.credentials || '',
         cardImageUrl: null,
+        isBot: false,
+        userId: user?.id ?? null,
       },
     }
     setChatBooking(adapted)
