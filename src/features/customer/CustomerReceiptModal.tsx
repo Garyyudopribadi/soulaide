@@ -52,7 +52,7 @@ export const CustomerReceiptModal: React.FC<CustomerReceiptModalProps> = ({
             </div>
             <div className="text-right">
               <span className="text-[10px] text-plum-200 uppercase tracking-widest block">No. Kwitansi</span>
-              <span className="font-mono text-xs font-bold text-white">{payment.midtrans_order_id}</span>
+              <span className="font-mono text-xs font-bold text-white">{payment.provider_order_id}</span>
             </div>
           </div>
         </CardHeader>
@@ -105,19 +105,24 @@ export const CustomerReceiptModal: React.FC<CustomerReceiptModalProps> = ({
                   <td className="p-3">
                     <p className="font-semibold text-slate-900">{payment.service_name}</p>
                     <p className="text-[11px] text-slate-500">Konseling Psikologi Terjadwal</p>
+                    {!!payment.unique_code && (
+                      <p className="text-[11px] text-slate-400">
+                        Termasuk kode unik QRIS Rp {payment.unique_code.toLocaleString('id-ID')}
+                      </p>
+                    )}
                   </td>
                   <td className="p-3 text-right capitalize text-slate-600">
-                    {payment.payment_type || 'Midtrans Gateway'}
+                    {payment.payment_type || 'QRIS'}
                   </td>
                   <td className="p-3 text-right font-bold text-slate-900">
-                    {formatIDR(payment.amount)}
+                    {formatIDR(payment.total_amount ?? payment.amount)}
                   </td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr className="bg-plum-50/50 text-slate-900 font-bold border-t border-plum-100">
                   <td colSpan={2} className="p-3 text-right text-plum-900">Total Pembayaran:</td>
-                  <td className="p-3 text-right text-plum-800 text-sm">{formatIDR(payment.amount)}</td>
+                  <td className="p-3 text-right text-plum-800 text-sm">{formatIDR(payment.total_amount ?? payment.amount)}</td>
                 </tr>
               </tfoot>
             </table>

@@ -12,7 +12,7 @@ Build a professional, trustworthy, warm, modern psychology counseling platform w
 - Public landing page and service information.
 - Four initial psychologist profiles, editable by admin.
 - Schedule availability and booking.
-- Online payment through Midtrans.
+- Online payment through QRISGate (dynamic QRIS per order; buyer pays the exact total; funds go directly to the merchant's bank/e-wallet).
 - WhatsApp Click-to-Chat.
 - Customer dashboard.
 - Psychologist dashboard.
@@ -32,7 +32,7 @@ Use the existing project where possible. Target stack:
 - React Hook Form + Zod.
 - TanStack Query.
 - Supabase Auth, PostgreSQL, Storage, Realtime, Edge Functions.
-- Midtrans for payment.
+- QRISGate for payment (REST API https://qrisgate.web.id).
 - Vercel or equivalent deployment.
 
 Do not replace working infrastructure without explaining why.
@@ -68,7 +68,7 @@ Apply the naming convention consistently to migrations, foreign key references, 
 
 1. Inspect before modifying.
 2. TypeScript strict; avoid `any`.
-3. No frontend secrets. Never expose service role or Midtrans server key.
+3. No frontend secrets. Never expose service role or QRISGate API key/webhook secret; QRISGate secrets must never use the `VITE_` prefix.
 4. RLS is mandatory; frontend route guards are not security boundaries.
 5. Validate all input on server and client.
 6. Use atomic database logic to prevent double booking.

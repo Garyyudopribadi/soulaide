@@ -6,9 +6,9 @@ Portal Administrator (Admin Dashboard) Soulaide dirancang untuk memfasilitasi ma
 1. **Pemisahan Tegas Data Operasional & Data Klinis (Clinical Privacy):**
    - Admin operasional memiliki akses penuh untuk mengelola ketersediaan, status pemesanan, dan transaksi keuangan.
    - Sesuai standar `docs/SECURITY_AND_PRIVACY.md`, **admin dilarang mengakses catatan observasi klinis (`Soulaide_clinical_notes`)**. Catatan klinis murni diisolasi untuk psikolog penanggung jawab dan super admin berlisensi klinis.
-2. **Rekonsiliasi Pembayaran & Refund Gateway Midtrans:**
-   - Memantau status transaksi Midtrans Snap secara langsung.
-   - Memproses pengembalian dana (*refund*) parsial maupun penuh yang tercatat ke tabel `Soulaide_refunds` dan termutasi ke status pembayaran.
+2. **Rekonsiliasi Pembayaran & Refund QRISGate:**
+   - Memantau status transaksi QRISGate secara langsung (Order ID eksternal `provider_order_id` dan ID transaksi QRISGate `provider_transaction_id`).
+   - QRISGate tidak menahan dana dan tidak memiliki API refund; pengembalian dana (*refund*) parsial maupun penuh dilakukan manual oleh merchant (transfer balik), tercatat ke tabel `Soulaide_refunds` dan termutasi ke status pembayaran.
 3. **Manajemen Pemesanan & Alokasi Psikolog:**
    - Pemantauan status reservasi real-time (*Pending Payment*, *Confirmed*, *Reschedule Requested*, *Completed*, *Cancelled*, *No-Show*).
    - Opsi pengalihan penugasan psikolog (*reassign psychologist*).
@@ -40,7 +40,7 @@ Modul administrator diimplementasikan pada `src/features/admin/`:
    - Kontroler pusat dengan navigasi sidebar lengkap:
      - `overview`: Ringkasan KPI dan aktivitas terkini
      - `bookings`: Operasional jadwal & penugasan psikolog
-     - `payments`: Rekonsiliasi transaksi Midtrans & refund
+     - `payments`: Rekonsiliasi transaksi QRISGate & refund
      - `services`: CMS Katalog Layanan & Tarif
      - `psychologists`: CMS Profil Psikolog
      - `staff`: Otoritas Pengguna & Hak Akses
@@ -60,8 +60,8 @@ Modul administrator diimplementasikan pada `src/features/admin/`:
    - Tindakan operasional: Konfirmasi Lunas, Setujui Reschedule, Tandai Selesai, Batalkan Sesi, dan Modal Pengalihan Psikolog.
 
 4. **`AdminPaymentsTab.tsx`:**
-   - Rekonsiliasi pembayaran dengan nomor Order ID Midtrans.
-   - Modal proses *refund* dengan validasi nominal batas atas dan alasan tertulis.
+   - Rekonsiliasi pembayaran dengan Order ID eksternal (`provider_order_id`) dan ID transaksi QRISGate (`provider_transaction_id`), termasuk rincian `base_amount + unique_code = total_amount`.
+   - Modal proses *refund* (transfer manual oleh merchant) dengan validasi nominal batas atas dan alasan tertulis.
 
 5. **`AdminStaffTab.tsx`:**
    - Daftar otorisasi pengguna.

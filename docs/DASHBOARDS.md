@@ -66,7 +66,7 @@ Information architecture:
    weekly load, status distribution, and ecosystem readiness.
 2. **Reservasi & Jadwal** — operational booking table, status filters, search, method
    filter, status changes, and psychologist reassignment.
-3. **Pembayaran & Refund** — Midtrans reconciliation and refund workflow.
+3. **Pembayaran & Refund** — QRISGate reconciliation and manual refund workflow (QRISGate holds no funds and has no refund API).
 4. **Layanan & Tarif / Profil Psikolog / Pusat Bantuan / Pengaturan Situs** — CMS.
 5. **Staf & Otoritas** — role management with the Super Admin guard.
 6. **Jejak Audit** — searchable audit trail and metadata inspection.

@@ -30,7 +30,8 @@
 
 ## 4. Payments
 
-- Integrasi payment gateway Midtrans.
+- Integrasi QRISGate (https://qrisgate.web.id): satu QRIS dinamis per order dengan kode unik; pembeli wajib membayar nominal tepat `base_amount + unique_code`.
+- Dana pembayaran masuk langsung ke rekening bank/e-wallet merchant; QRISGate hanya membaca notifikasi pembayaran dan tidak menahan dana.
 - Pembuatan transaksi dilakukan melalui backend/Edge Function.
 - Status pembayaran hanya diperbarui berdasarkan webhook tervalidasi atau pemeriksaan server-side yang sah.
 - Simpan referensi transaksi, nominal, mata uang, status, waktu, dan metadata minimum yang diperlukan.

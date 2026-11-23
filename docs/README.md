@@ -13,7 +13,7 @@ Dokumentasi awal untuk pengembangan web application Soulaide Psychology.
 | `AUTH_AND_ACCESS.md` | Autentikasi, role, route protection, dan otorisasi |
 | `SECURITY_AND_PRIVACY.md` | RLS, privasi data psikologis, audit, dan penyimpanan |
 | `BOOKING_WORKFLOW.md` | Alur jadwal, slot, booking, perubahan jadwal |
-| `PAYMENTS.md` | Alur pembayaran Midtrans dan webhook |
+| `PAYMENTS.md` | Alur pembayaran QRISGate (QRIS dinamis) dan webhook |
 | `DASHBOARDS.md` | Kebutuhan dashboard customer, psikolog, dan admin |
 | `LIVE_CHAT_AND_WHATSAPP.md` | Presence, live chat, dan WhatsApp |
 | `CONTENT_AND_SERVICES.md` | Konten publik, layanan, harga, psikolog, dan CMS |

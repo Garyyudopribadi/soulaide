@@ -602,8 +602,15 @@ export interface Database {
           booking_id: string
           amount: number
           status: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded' | 'partially_refunded'
-          midtrans_order_id: string
-          midtrans_transaction_id: string | null
+          provider_order_id: string
+          provider_transaction_id: string | null
+          provider: string
+          unique_code: number | null
+          total_amount: number | null
+          qr_string: string | null
+          qr_image: string | null
+          checkout_url: string | null
+          expires_at: string | null
           payment_type: string | null
           payment_time: string | null
           created_at: string
@@ -614,8 +621,15 @@ export interface Database {
           booking_id: string
           amount: number
           status?: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded' | 'partially_refunded'
-          midtrans_order_id: string
-          midtrans_transaction_id?: string | null
+          provider_order_id: string
+          provider_transaction_id?: string | null
+          provider?: string
+          unique_code?: number | null
+          total_amount?: number | null
+          qr_string?: string | null
+          qr_image?: string | null
+          checkout_url?: string | null
+          expires_at?: string | null
           payment_type?: string | null
           payment_time?: string | null
           created_at?: string
@@ -626,8 +640,15 @@ export interface Database {
           booking_id?: string
           amount?: number
           status?: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded' | 'partially_refunded'
-          midtrans_order_id?: string
-          midtrans_transaction_id?: string | null
+          provider_order_id?: string
+          provider_transaction_id?: string | null
+          provider?: string
+          unique_code?: number | null
+          total_amount?: number | null
+          qr_string?: string | null
+          qr_image?: string | null
+          checkout_url?: string | null
+          expires_at?: string | null
           payment_type?: string | null
           payment_time?: string | null
           created_at?: string

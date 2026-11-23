@@ -44,7 +44,7 @@ Direktori `public/` telah memuat materi visual awal untuk profil psikolog dan br
 1. **Environment Variables:**
    - Telah tersedia `.env.example` dan `.env` yang mendefinisikan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY`.
    - Variabel frontend dipastikan menggunakan prefix `VITE_` (bukan `NEXT_PUBLIC_`).
-   - Secret privilese tinggi (seperti `SUPABASE_SERVICE_ROLE_KEY` dan `MIDTRANS_SERVER_KEY`) dipastikan **tidak** dimasukkan ke dalam bundle frontend.
+   - Secret privilese tinggi (seperti `SUPABASE_SERVICE_ROLE_KEY`, `QRISGATE_API_KEY`, dan `QRISGATE_WEBHOOK_SECRET`) dipastikan **tidak** dimasukkan ke dalam bundle frontend.
 2. **Database Naming Convention:**
    - **Aturan Wajib:** Seluruh tabel custom Supabase yang akan dibuat pada Phase 2 wajib menggunakan prefix persis `Soulaide_` (misalnya `Soulaide_profiles`, `Soulaide_bookings`, dll.).
 

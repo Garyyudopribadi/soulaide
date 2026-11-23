@@ -5,7 +5,7 @@
 Portal Klien (Customer Dashboard) Soulaide dirancang sebagai *hub* terintegrasi bagi klien untuk:
 1. Memantau sesi konseling mendatang dan riwayat sesi sebelumnya.
 2. Membuka room konseling online atau melihat petunjuk lokasi klinik tatap muka.
-3. Melakukan pembayaran invoice tertunda secara instan melalui Midtrans Snap.
+3. Melakukan pembayaran invoice tertunda secara instan melalui QRISGate (QRIS dinamis dengan nominal tepat, ditampilkan di `QrisPaymentModal` dengan polling status otomatis).
 4. Melihat, mencetak, atau menyimpan kwitansi resmi (*receipt invoice*) berformat standar akuntansi.
 5. Memperbarui profil akun, identitas kependudukan, dan data kontak darurat (*emergency contact*).
 6. Mengakses arsip dokumen *Informed Consent* yang telah ditandatangani secara digital dengan jaminan kerahasiaan Kode Etik Psikologi HIMPSI.

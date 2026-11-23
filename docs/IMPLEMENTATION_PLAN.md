@@ -62,11 +62,11 @@ Kerjakan bertahap. Jangan melanjutkan fase berikutnya sebelum fase aktif diuji, 
 
 ## Phase 6 — Payments
 
-- Midtrans server integration.
-- Edge Function transaction creation.
-- Webhook signature verification.
+- QRISGate server integration (REST API https://qrisgate.web.id).
+- Edge Function transaction creation (`create-payment`).
+- Webhook HMAC signature verification (`qrisgate-webhook`).
 - Idempotency and reconciliation.
-- Payment status UI.
+- Payment status UI (modal QRIS dengan nominal tepat dan polling status).
 
 ## Phase 7 — Customer dashboard
 
@@ -103,7 +103,7 @@ Kerjakan bertahap. Jangan melanjutkan fase berikutnya sebelum fase aktif diuji, 
 
 - Security review.
 - RLS and role tests.
-- Payment sandbox-to-production checklist.
+- Checklist aktivasi pembayaran QRISGate (API key produksi, webhook secret & URL, deteksi merchant, saldo kredit, smoke test).
 - Performance/accessibility checks.
 - Backup and recovery plan.
 - Monitoring and error handling.
@@ -129,10 +129,12 @@ Kerjakan bertahap. Jangan melanjutkan fase berikutnya sebelum fase aktif diuji, 
 | **Phase 3** | Authentication & Authorization | ✅ COMPLETED | [docs/AUTH_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/AUTH_IMPLEMENTATION.md) |
 | **Phase 4** | Public Website & CMS | ✅ COMPLETED | [docs/PUBLIC_WEBSITE_AND_CMS.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/PUBLIC_WEBSITE_AND_CMS.md) |
 | **Phase 5** | Booking & Scheduling | ✅ COMPLETED | [docs/BOOKING_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/BOOKING_IMPLEMENTATION.md) |
-| **Phase 6** | Payments & Midtrans | ✅ COMPLETED | [docs/PAYMENTS_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/PAYMENTS_IMPLEMENTATION.md) |
+| **Phase 6** | Payments & QRISGate | ✅ COMPLETED | [docs/PAYMENTS_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/PAYMENTS_IMPLEMENTATION.md) |
 | **Phase 7** | Customer Dashboard | ✅ COMPLETED | [docs/CUSTOMER_DASHBOARD_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/CUSTOMER_DASHBOARD_IMPLEMENTATION.md) |
 | **Phase 8** | Psychologist Dashboard | ✅ COMPLETED | [docs/PSYCHOLOGIST_DASHBOARD_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/PSYCHOLOGIST_DASHBOARD_IMPLEMENTATION.md) |
 | **Phase 9** | Admin Operations | ✅ COMPLETED | [docs/ADMIN_DASHBOARD_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/ADMIN_DASHBOARD_IMPLEMENTATION.md) |
 | **Phase 10** | Communications & Presence | ✅ COMPLETED | [docs/COMMUNICATIONS_IMPLEMENTATION.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/COMMUNICATIONS_IMPLEMENTATION.md) |
 | **Phase 11** | Production Readiness | ✅ COMPLETED | [docs/PRODUCTION_READINESS.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/PRODUCTION_READINESS.md) & [docs/DEPLOYMENT_AND_HANDOVER.md](file:///F:/Garyudo.my.id/soulaide-webapp/docs/DEPLOYMENT_AND_HANDOVER.md) |
+
+> Catatan riwayat: Phase 6 awalnya diimplementasikan dengan Midtrans; provider pembayaran diganti menjadi QRISGate pada 2026-11-23 (migrasi `20261123000012_switch_payments_to_qrisgate.sql`). Seluruh instruksi pembayaran ke depan mengacu pada QRISGate.
 

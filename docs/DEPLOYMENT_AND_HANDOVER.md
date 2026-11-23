@@ -11,7 +11,8 @@ Panduan resmi penyebaran (*deployment*), inisialisasi lingkungan baru, dan serah
    - `pnpm` versi 9.x atau lebih baru (`corepack enable pnpm`).
 2. **Akun Layanan Eksternal:**
    - Akun Supabase (Organisasi & Proyek Baru).
-   - Akun Bisnis Midtrans (Sandbox & Production).
+   - Akun QRISGate (https://qrisgate.web.id) dengan QRIS statis merchant terdaftar, API key, dan webhook secret.
+   - Rekening bank/e-wallet merchant penerima dana QRIS (dana masuk langsung, tanpa ditahan platform).
    - Akun Vercel atau Cloudflare Pages (untuk hosting frontend).
    - Nomor WhatsApp Bisnis resmi terverifikasi (`+6289630869804`).
 
@@ -39,6 +40,7 @@ supabase db push
 # 20261122000007_create_soulaide_admin_policies.sql
 # 20261122000008_create_soulaide_communications_policies.sql
 # 20261122000009_seed_initial_data.sql
+# 20261123000012_switch_payments_to_qrisgate.sql
 ```
 
 ---
@@ -48,15 +50,19 @@ supabase db push
 Jalankan perintah berikut untuk menyetel kunci rahasia pada Edge Functions:
 
 ```bash
-supabase secrets set MIDTRANS_SERVER_KEY="[YOUR_MIDTRANS_SERVER_KEY]"
+supabase secrets set QRISGATE_API_KEY="[YOUR_QRISGATE_API_KEY]"
+supabase secrets set QRISGATE_WEBHOOK_SECRET="[YOUR_QRISGATE_WEBHOOK_SECRET]"
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY="[YOUR_SUPABASE_SERVICE_ROLE_KEY]"
-supabase secrets set MIDTRANS_IS_PRODUCTION="true" # atau false untuk sandbox
 ```
+
+- `QRISGATE_API_KEY` adalah API key `qg_live_...` dari dashboard QRISGate, tab **"API & Webhook"**. Key hanya ditampilkan sekali saat dibuat; simpan segera dan jangan pernah menaruhnya di frontend atau variabel berprefix `VITE_`.
+- Daftarkan URL webhook merchant pada pengaturan QRISGate:
+  `https://[project-ref].supabase.co/functions/v1/qrisgate-webhook`
 
 Deploy kedua Edge Functions:
 ```bash
 supabase functions deploy create-payment --no-verify-jwt
-supabase functions deploy midtrans-webhook --no-verify-jwt
+supabase functions deploy qrisgate-webhook --no-verify-jwt
 ```
 
 ---
@@ -72,8 +78,8 @@ supabase functions deploy midtrans-webhook --no-verify-jwt
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Public Anon Key Supabase | `eyJhbGciOi...` |
 | `VITE_APP_NAME` | Nama identitas platform | `Soulaide` |
 | `VITE_WHATSAPP_NUMBER` | Nomor bantuan resmi | `+6289630869804` |
-| `VITE_MIDTRANS_CLIENT_KEY` | Client Key Midtrans | `Mid-client-xxxxxxxx` |
-| `VITE_MIDTRANS_IS_PRODUCTION` | Flag mode produksi | `true` |
+
+Tidak ada variabel QRISGate di frontend. `QRISGATE_API_KEY` dan `QRISGATE_WEBHOOK_SECRET` hanya disimpan sebagai Supabase Edge Function secrets dan tidak boleh pernah diberi prefix `VITE_`. Frontend tidak memuat skrip pembayaran eksternal apa pun.
 
 3. Pengaturan Build & Output:
    - **Framework Preset:** Vite
@@ -103,3 +109,9 @@ Pastikan seluruh staf operasional memahami bahwa fitur live chat dan pesan Whats
 - **Hotline Kemenkes RI:** 119 ext. 8
 - **Sejiwa (HIMPSI):** 119 ext. 8
 - **IGD Rumah Sakit Terdekat**
+
+### 5.4 Operasional Pembayaran QRISGate (Sisi Merchant)
+- **Deteksi pembayaran** dikonfigurasi di sisi merchant, bukan di kode aplikasi. Pilih salah satu: APK listener Android di ponsel merchant (membaca notifikasi DANA, BRImo, myBCA, Livin, ShopeePay, GoPay), detektor berbasis sesi (GoPay Merchant / Shopee Partner / BCA Merchant), atau notifikasi email bank.
+- **Khusus merchant GoPay:** notifikasi merchant GoPay hanya aktif untuk QRIS statis. QRISGate menampilkan QR statis dan pembeli memasukkan nominal tepat (`base_amount + unique_code`) secara manual; kanal lain memakai QR dinamis dengan nominal terkunci.
+- **Biaya platform:** flat Rp 100 per transaksi sukses dipotong dari saldo kredit merchant QRISGate (dikembalikan bila transaksi tidak pernah selesai). Pastikan saldo kredit mencukupi, atau aktifkan langganan opsional yang membebaskan biaya tersebut. Tidak ada MDR persentase.
+- **Refund:** QRISGate tidak menahan dana dan tidak memiliki API refund. Pengembalian dana dilakukan manual oleh merchant (transfer balik ke pembeli) dan dicatat ke tabel `Soulaide_refunds` melalui dashboard admin.

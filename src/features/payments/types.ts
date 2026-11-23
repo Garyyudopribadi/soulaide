@@ -11,48 +11,48 @@ export interface PaymentRecord {
   booking_id: string;
   amount: number;
   status: PaymentStatus;
-  midtrans_order_id: string;
-  midtrans_transaction_id: string | null;
+  provider: string;
+  provider_order_id: string;
+  provider_transaction_id: string | null;
+  unique_code: number | null;
+  total_amount: number | null;
+  qr_string: string | null;
+  qr_image: string | null;
+  checkout_url: string | null;
+  expires_at: string | null;
   payment_type: string | null;
   payment_time: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface MidtransSnapTransactionResponse {
-  token: string;
-  redirect_url: string;
+/** Response of the 'create-payment' edge function (QRISGate session). */
+export interface QrisGatePaymentSession {
   order_id: string;
+  transaction_id: string | null;
+  /** Base service price, before the unique code. */
   amount: number;
+  unique_code: number;
+  /** Exact amount the buyer must pay: amount + unique_code. */
+  total_amount: number;
+  qr_string: string | null;
+  qr_image_base64: string | null;
+  checkout_url: string | null;
+  expires_at: string | null;
   mode?: 'live' | 'mock';
+  reused?: boolean;
   message?: string;
 }
 
-export interface MidtransWebhookPayload {
-  order_id: string;
-  status_code: string;
-  gross_amount: string;
-  signature_key: string;
-  transaction_status: string;
-  fraud_status?: string;
+/** Flat webhook payload sent by QRISGate (no `data` wrapper). */
+export interface QrisGateWebhookPayload {
+  event: 'payment.paid' | 'payment.expired' | 'payment.cancelled' | string;
   transaction_id?: string;
-  payment_type?: string;
-  settlement_time?: string;
-  transaction_time?: string;
-}
-
-export interface MidtransSnapOptions {
-  onSuccess?: (result: Record<string, unknown>) => void;
-  onPending?: (result: Record<string, unknown>) => void;
-  onError?: (result: Record<string, unknown>) => void;
-  onClose?: () => void;
-}
-
-declare global {
-  interface Window {
-    snap?: {
-      pay: (token: string, options?: MidtransSnapOptions) => void;
-      embed: (token: string, options: { embedId: string } & MidtransSnapOptions) => void;
-    };
-  }
+  external_order_id: string;
+  base_amount?: number;
+  unique_code?: number;
+  total_amount?: number;
+  customer_name?: string;
+  paid_at?: string;
+  created_at?: string;
 }

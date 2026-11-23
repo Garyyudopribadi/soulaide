@@ -8,7 +8,7 @@
 - Forms: React Hook Form + Zod.
 - Server state: TanStack Query.
 - Backend platform: Supabase Auth, PostgreSQL, Storage, Realtime, Edge Functions.
-- Payment gateway: Midtrans.
+- Payment gateway: QRISGate (REST API https://qrisgate.web.id; QRIS dinamis per order, dana langsung ke rekening bank/e-wallet merchant).
 - WhatsApp: Click-to-Chat pada tahap awal; integrasi API resmi dapat dipertimbangkan kemudian.
 - Hosting frontend: Vercel atau platform setara.
 
@@ -62,7 +62,7 @@ docs/
 
 ## 4. Architecture rules
 
-- Jangan menaruh Supabase service role key atau Midtrans server key di frontend.
+- Jangan menaruh Supabase service role key atau QRISGate API key/webhook secret di frontend (secret QRISGate tidak boleh berprefix `VITE_`).
 - Semua operasi privileged dilakukan server-side.
 - Frontend tidak boleh menjadi sumber kebenaran status pembayaran.
 - Gunakan database transaction/RPC yang aman untuk reservasi slot.

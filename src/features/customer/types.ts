@@ -24,8 +24,10 @@ export interface CustomerPaymentItem {
   delivery_method: string;
   amount: number;
   status: PaymentStatus;
-  midtrans_order_id: string;
-  midtrans_transaction_id: string | null;
+  provider_order_id: string;
+  provider_transaction_id: string | null;
+  unique_code?: number | null;
+  total_amount?: number | null;
   payment_type: string | null;
   payment_time: string | null;
   created_at: string;

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PaymentStatusBadge } from './PaymentStatusBadge';
-import { MidtransSnapModal } from './MidtransSnapModal';
+import { QrisPaymentModal } from './QrisPaymentModal';
 import { CreditCard, Calendar, Clock } from 'lucide-react';
 import type { PaymentStatus } from './types';
 
@@ -82,7 +82,7 @@ export const PaymentSummaryCard: React.FC<PaymentSummaryCardProps> = ({
         </CardContent>
       </Card>
 
-      <MidtransSnapModal
+      <QrisPaymentModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         bookingId={bookingId}

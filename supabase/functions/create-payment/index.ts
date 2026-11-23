@@ -1,10 +1,11 @@
 // Supabase Edge Function: create-payment
-// Description: Securely creates a Midtrans Snap transaction for a Soulaide booking.
+// Description: Securely creates a QRISGate dynamic-QRIS payment session for a Soulaide booking.
 // Enforces:
 // 1. JWT authentication and customer ownership check
 // 2. Booking status validation (must be 'pending_payment')
 // 3. Price validation directly from database (Soulaide_services.price), never trusting client-sent amount
-// 4. Server-side communication with Midtrans Snap API using MIDTRANS_SERVER_KEY
+// 4. Server-side communication with QRISGate API using QRISGATE_API_KEY (never exposed to the client)
+// 5. Reuse of an existing unexpired pending payment instead of allocating a new unique code
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -14,8 +15,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const QRISGATE_API_BASE = 'https://qrisgate.web.id';
+const SESSION_TTL_MINUTES = 15;
+
 interface CreatePaymentRequest {
   booking_id: string;
+}
+
+interface QrisGateTransactionData {
+  transaction_id: string;
+  external_order_id: string;
+  merchant_name?: string;
+  base_amount: number;
+  unique_code: number;
+  total_amount: number;
+  qr_string: string;
+  qr_image_base64: string | null;
+  checkout_url: string;
+  expires_at: string;
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 serve(async (req: Request) => {
@@ -27,16 +51,12 @@ serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Missing Authorization header' }, 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const midtransServerKey = Deno.env.get('MIDTRANS_SERVER_KEY') || '';
-    const isProduction = Deno.env.get('MIDTRANS_IS_PRODUCTION') === 'true';
+    const qrisgateApiKey = Deno.env.get('QRISGATE_API_KEY') || '';
 
     // Create admin Supabase client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -46,18 +66,12 @@ serve(async (req: Request) => {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized user token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Unauthorized user token' }, 401);
     }
 
     const { booking_id }: CreatePaymentRequest = await req.json();
     if (!booking_id) {
-      return new Response(JSON.stringify({ error: 'Missing booking_id parameter' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Missing booking_id parameter' }, 400);
     }
 
     // 1. Fetch booking and verify ownership
@@ -68,27 +82,47 @@ serve(async (req: Request) => {
       .single();
 
     if (bookingError || !booking) {
-      return new Response(JSON.stringify({ error: 'Booking not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Booking not found' }, 404);
     }
 
     if (booking.customer_id !== user.id) {
-      return new Response(JSON.stringify({ error: 'Forbidden: You do not own this booking' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Forbidden: You do not own this booking' }, 403);
     }
 
     if (booking.status !== 'pending_payment') {
-      return new Response(JSON.stringify({ error: `Cannot pay for booking with status: ${booking.status}` }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return jsonResponse({ error: `Cannot pay for booking with status: ${booking.status}` }, 400);
+    }
+
+    // 2. Reuse an existing unexpired pending QRISGate session for this booking.
+    // Creating a new QRISGate transaction reserves a unique code and the Rp100 platform fee,
+    // so retries must not allocate a fresh QR while one is still valid.
+    const { data: existingPayment } = await supabaseAdmin
+      .from('Soulaide_payments')
+      .select('*')
+      .eq('booking_id', booking.id)
+      .eq('status', 'pending')
+      .eq('provider', 'qrisgate')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPayment && existingPayment.expires_at && new Date(existingPayment.expires_at) > new Date()) {
+      return jsonResponse({
+        order_id: existingPayment.provider_order_id,
+        transaction_id: existingPayment.provider_transaction_id,
+        amount: Number(existingPayment.amount),
+        unique_code: existingPayment.unique_code ?? 0,
+        total_amount: Number(existingPayment.total_amount ?? existingPayment.amount),
+        qr_string: existingPayment.qr_string,
+        qr_image_base64: existingPayment.qr_image,
+        checkout_url: existingPayment.checkout_url,
+        expires_at: existingPayment.expires_at,
+        mode: existingPayment.provider_transaction_id ? 'live' : 'mock',
+        reused: true,
       });
     }
 
-    // 2. Fetch trusted service price directly from Soulaide_services
+    // 3. Fetch trusted service price directly from Soulaide_services
     const { data: service, error: serviceError } = await supabaseAdmin
       .from('Soulaide_services')
       .select('id, name, price_online, price_offline')
@@ -96,10 +130,7 @@ serve(async (req: Request) => {
       .single();
 
     if (serviceError || !service) {
-      return new Response(JSON.stringify({ error: 'Service details not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Service details not found' }, 404);
     }
 
     // Fetch customer profile for payment details
@@ -109,123 +140,117 @@ serve(async (req: Request) => {
       .eq('id', user.id)
       .single();
 
-    const grossAmount = Number(
+    const baseAmount = Math.round(Number(
       booking.delivery_method === 'offline'
         ? (service.price_offline || 0)
         : (service.price_online || 0)
-    );
+    ));
     const orderId = `SLD-${booking.booking_code}-${Date.now().toString().slice(-6)}`;
 
-    // 3. Check if Midtrans Server Key is configured
-    if (!midtransServerKey) {
-      // Local dev / test mock mode when Midtrans keys are pending merchant onboarding
-      const mockSnapToken = `mock-snap-token-${Date.now()}`;
-      const mockRedirectUrl = `https://app.sandbox.midtrans.com/snap/v2/vtweb/${mockSnapToken}`;
+    // 4. Local dev / test mock mode when the QRISGate API key is not configured yet
+    if (!qrisgateApiKey) {
+      const expiresAt = new Date(Date.now() + SESSION_TTL_MINUTES * 60 * 1000).toISOString();
 
-      // Insert or update payment record
       await supabaseAdmin
         .from('Soulaide_payments')
         .insert({
           booking_id: booking.id,
-          amount: grossAmount,
+          amount: baseAmount,
           status: 'pending',
-          midtrans_order_id: orderId,
+          provider: 'qrisgate',
+          provider_order_id: orderId,
+          unique_code: 0,
+          total_amount: baseAmount,
+          expires_at: expiresAt,
+          payment_type: 'qris',
         });
 
-      return new Response(JSON.stringify({
+      return jsonResponse({
         order_id: orderId,
-        amount: grossAmount,
-        token: mockSnapToken,
-        redirect_url: mockRedirectUrl,
+        transaction_id: null,
+        amount: baseAmount,
+        unique_code: 0,
+        total_amount: baseAmount,
+        qr_string: null,
+        qr_image_base64: null,
+        checkout_url: null,
+        expires_at: expiresAt,
         mode: 'mock',
-        message: 'Midtrans server key not set in environment. Running in mock simulation mode.',
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
+        message: 'QRISGate API key belum diatur. Mode simulasi — tidak ada QR asli yang dibuat.',
       });
     }
 
-    // 4. Midtrans Snap API call
-    const snapUrl = isProduction
-      ? 'https://app.midtrans.com/snap/v1/transactions'
-      : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-
-    const snapPayload = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: grossAmount,
-      },
-      item_details: [
-        {
-          id: service.id,
-          price: grossAmount,
-          quantity: 1,
-          name: service.name.slice(0, 50),
-        },
-      ],
-      customer_details: {
-        first_name: profile?.full_name || 'Pelanggan Soulaide',
-        email: user.email || 'customer@soulaide.my.id',
-        phone: profile?.phone_number || '',
-      },
-      expiry: {
-        duration: 30,
-        unit: 'minute',
-      },
-    };
-
-    const midtransAuth = btoa(`${midtransServerKey}:`);
-    const midtransResponse = await fetch(snapUrl, {
+    // 5. QRISGate transaction API call
+    const origin = req.headers.get('origin') || Deno.env.get('SITE_URL') || '';
+    const qrisgateResponse = await fetch(`${QRISGATE_API_BASE}/api/v1/transactions`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${midtransAuth}`,
+        'Authorization': `Bearer ${qrisgateApiKey}`,
       },
-      body: JSON.stringify(snapPayload),
+      body: JSON.stringify({
+        external_order_id: orderId,
+        amount: baseAmount,
+        customer_name: profile?.full_name || user.email || 'Pelanggan Soulaide',
+        return_url: origin ? `${origin}/dashboard` : undefined,
+        include_qr_image: true,
+      }),
     });
 
-    if (!midtransResponse.ok) {
-      const errorBody = await midtransResponse.text();
-      return new Response(JSON.stringify({
-        error: 'Failed to create transaction with Midtrans',
+    if (!qrisgateResponse.ok) {
+      const errorBody = await qrisgateResponse.text();
+      console.error('QRISGate transaction creation failed:', qrisgateResponse.status, errorBody);
+      return jsonResponse({
+        error: 'Failed to create transaction with QRISGate',
         details: errorBody,
-      }), {
-        status: 502,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      }, 502);
     }
 
-    const midtransData = await midtransResponse.json();
+    const qrisgateBody = await qrisgateResponse.json();
+    const trx: QrisGateTransactionData | undefined = qrisgateBody?.data;
 
-    // 5. Save payment entry into public."Soulaide_payments"
+    if (!qrisgateBody?.success || !trx?.transaction_id || !trx.total_amount) {
+      return jsonResponse({ error: 'Unexpected QRISGate response shape' }, 502);
+    }
+
+    // 6. Save payment entry into public."Soulaide_payments"
     const { error: paymentInsertError } = await supabaseAdmin
       .from('Soulaide_payments')
       .insert({
         booking_id: booking.id,
-        amount: grossAmount,
+        amount: trx.base_amount,
         status: 'pending',
-        midtrans_order_id: orderId,
+        provider: 'qrisgate',
+        provider_order_id: trx.external_order_id,
+        provider_transaction_id: trx.transaction_id,
+        unique_code: trx.unique_code,
+        total_amount: trx.total_amount,
+        qr_string: trx.qr_string,
+        qr_image: trx.qr_image_base64,
+        checkout_url: trx.checkout_url,
+        expires_at: trx.expires_at,
+        payment_type: 'qris',
       });
 
     if (paymentInsertError) {
       console.error('Error inserting payment record:', paymentInsertError);
     }
 
-    return new Response(JSON.stringify({
-      order_id: orderId,
-      amount: grossAmount,
-      token: midtransData.token,
-      redirect_url: midtransData.redirect_url,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    return jsonResponse({
+      order_id: trx.external_order_id,
+      transaction_id: trx.transaction_id,
+      amount: trx.base_amount,
+      unique_code: trx.unique_code,
+      total_amount: trx.total_amount,
+      qr_string: trx.qr_string,
+      qr_image_base64: trx.qr_image_base64,
+      checkout_url: trx.checkout_url,
+      expires_at: trx.expires_at,
+      mode: 'live',
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: message }, 500);
   }
 });

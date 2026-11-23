@@ -22,7 +22,7 @@ import { notificationService } from '@/features/chat/notificationService'
 import { toDateKey } from '@/lib/dashboard'
 import { CustomerReceiptModal } from './CustomerReceiptModal'
 import { CustomerChatModal } from './CustomerChatModal'
-import { MidtransSnapModal } from '@/features/payments/MidtransSnapModal'
+import { QrisPaymentModal } from '@/features/payments/QrisPaymentModal'
 import type { CustomerTab, CustomerPaymentItem } from './types'
 import {
   CalendarDays,
@@ -295,7 +295,7 @@ export const CustomerDashboardPage: React.FC = () => {
             eyebrow="Keuangan"
             title="Tagihan &"
             accent="Kwitansi"
-            description="Pantau status invoice Midtrans dan unduh kwitansi resmi untuk setiap transaksi."
+            description="Pantau status invoice QRIS dan unduh kwitansi resmi untuk setiap transaksi."
           />
           <CustomerPaymentsTab
             payments={payments}
@@ -441,7 +441,7 @@ export const CustomerDashboardPage: React.FC = () => {
       )}
 
       {paymentBooking && (
-        <MidtransSnapModal
+        <QrisPaymentModal
           isOpen={Boolean(paymentBooking)}
           onClose={() => setPaymentBooking(null)}
           bookingId={paymentBooking.id}

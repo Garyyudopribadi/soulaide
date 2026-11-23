@@ -38,7 +38,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchOrder = p.midtrans_order_id.toLowerCase().includes(q);
+        const matchOrder = p.provider_order_id.toLowerCase().includes(q);
         const matchCode = p.booking_code.toLowerCase().includes(q);
         const matchCust = p.customer_name.toLowerCase().includes(q);
         if (!matchOrder && !matchCode && !matchCust) return false;
@@ -81,7 +81,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
 
     try {
       await adminService.processRefund(refundPayment.id, refundAmount, refundReason);
-      setActionNotice(`Refund sebesar ${formatIDR(refundAmount)} untuk ${refundPayment.midtrans_order_id} berhasil diproses.`);
+      setActionNotice(`Refund sebesar ${formatIDR(refundAmount)} untuk ${refundPayment.provider_order_id} berhasil diproses.`);
       setRefundPayment(null);
       onRefresh();
       setTimeout(() => setActionNotice(null), 4000);
@@ -165,7 +165,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
           <CardHeader className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-plum-600" />
-              <span>Daftar Transaksi Midtrans & Rekonsiliasi ({filteredPayments.length})</span>
+              <span>Daftar Transaksi QRISGate & Rekonsiliasi ({filteredPayments.length})</span>
             </CardTitle>
           </CardHeader>
           <div className="overflow-x-auto">
@@ -187,7 +187,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                   <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <span className="font-mono font-bold text-slate-800 block text-[11px]">
-                        {p.midtrans_order_id}
+                        {p.provider_order_id}
                       </span>
                       <span className="font-mono text-plum-700 text-[10px]">
                         Booking: {p.booking_code}
@@ -198,7 +198,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                       <span className="text-[10px] text-slate-400">{p.customer_email || '-'}</span>
                     </td>
                     <td className="py-3.5 px-4 font-medium text-slate-800">{p.service_name}</td>
-                    <td className="py-3.5 px-4 capitalize text-slate-600">{p.payment_type || 'Midtrans Snap'}</td>
+                    <td className="py-3.5 px-4 capitalize text-slate-600">{p.payment_type || 'QRIS'}</td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {new Date(p.payment_time || p.created_at).toLocaleDateString('id-ID', {
                         day: 'numeric',
@@ -207,7 +207,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                       })}
                     </td>
                     <td className="py-3.5 px-4 text-right font-bold text-slate-900">
-                      {formatIDR(p.amount)}
+                      {formatIDR(p.total_amount ?? p.amount)}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <PaymentStatusBadge status={p.status} />
@@ -241,7 +241,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                 Proses Pengembalian Dana (Refund)
               </CardTitle>
               <p className="text-xs text-slate-500">
-                Order ID: <strong className="font-mono">{refundPayment.midtrans_order_id}</strong>
+                Order ID: <strong className="font-mono">{refundPayment.provider_order_id}</strong>
               </p>
             </CardHeader>
             <form onSubmit={handleConfirmRefund} className="p-5 space-y-4 text-xs">

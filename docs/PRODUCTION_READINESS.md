@@ -1,6 +1,6 @@
 # Phase 11 — Production Readiness Review & Checklist
 
-Dokumen audit kesiapan produksi (*production readiness*) untuk platform psikologi Soulaide, mencakup verifikasi keamanan, isolasi privasi klinis, validasi RLS, checklist migrasi pembayaran Midtrans, rencana pemulihan bencana (*disaster recovery*), dan pemantauan sistem.
+Dokumen audit kesiapan produksi (*production readiness*) untuk platform psikologi Soulaide, mencakup verifikasi keamanan, isolasi privasi klinis, validasi RLS, checklist aktivasi pembayaran QRISGate, rencana pemulihan bencana (*disaster recovery*), dan pemantauan sistem.
 
 ---
 
@@ -16,9 +16,9 @@ Sesuai kode etik psikologi HIMPSI dan prinsip hak istimewa terkecil (*least priv
 - **Penyimpanan Berkas Asesmen:** Semua berkas laporan klinis wajib menggunakan Supabase Private Storage dengan akses melalui *time-limited signed URLs*.
 
 ### 1.2 Isolasi Kunci Rahasia (*Secret Zero-Leakage*)
-- **Frontend Bundle Security:** Kunci rahasia seperti `MIDTRANS_SERVER_KEY` dan `SUPABASE_SERVICE_ROLE_KEY` **TIDAK PERNAH** diberi awalan `VITE_` dan tidak dimasukkan ke dalam bundel klien Vite.
-- **Edge Functions:** Seluruh proses pembayaran, pembuatan transaksi Midtrans Snap, dan penerimaan webhook dijalankan di Supabase Edge Functions yang terisolasi secara server-authoritative.
-- **Verifikasi Kriptografis Webhook:** Menggunakan algoritma SHA-512 berbasis Web Crypto API standar untuk memvalidasi `signature_key = SHA-512(order_id + status_code + gross_amount + server_key)`.
+- **Frontend Bundle Security:** Kunci rahasia seperti `QRISGATE_API_KEY`, `QRISGATE_WEBHOOK_SECRET`, dan `SUPABASE_SERVICE_ROLE_KEY` **TIDAK PERNAH** diberi awalan `VITE_` dan tidak dimasukkan ke dalam bundel klien Vite.
+- **Edge Functions:** Seluruh proses pembayaran, pembuatan transaksi QRISGate, dan penerimaan webhook dijalankan di Supabase Edge Functions yang terisolasi secara server-authoritative.
+- **Verifikasi Kriptografis Webhook:** Menggunakan HMAC-SHA256 berbasis Web Crypto API standar untuk memvalidasi `X-QRISGate-Signature` atas `timestamp + "." + rawBody` dengan webhook secret; timestamp lebih tua dari 5 menit ditolak dan perbandingan dilakukan secara constant-time.
 
 ---
 
@@ -34,24 +34,26 @@ Sesuai kode etik psikologi HIMPSI dan prinsip hak istimewa terkecil (*least priv
 
 ---
 
-## 3. Checklist Transisi Midtrans: Sandbox ke Produksi
+## 3. Checklist Aktivasi Pembayaran QRISGate (Produksi)
 
-Sebelum beralih dari Sandbox (`app.sandbox.midtrans.com`) ke Lingkungan Produksi (`app.midtrans.com`), pastikan seluruh langkah berikut telah diverifikasi:
+> Catatan riwayat: checklist ini menggantikan checklist transisi Sandbox→Produksi Midtrans sejak provider pembayaran diganti menjadi QRISGate pada 2026-11-23.
 
-- [ ] **Akun Bisnis Midtrans:** Akun bisnis terverifikasi resmi atas nama badan usaha Soulaide dengan KYC disetujui.
+Sebelum mengaktifkan pembayaran QRISGate di lingkungan produksi, pastikan seluruh langkah berikut telah diverifikasi:
+
+- [ ] **Akun & Merchant QRISGate:** QRIS statis merchant terdaftar di QRISGate (https://qrisgate.web.id) dan rekening bank/e-wallet penerima dana siap (dana masuk langsung ke merchant, tidak ditahan platform).
 - [ ] **Kunci API Produksi:**
-  - `Production Client Key` dimasukkan ke variabel lingkungan `VITE_MIDTRANS_CLIENT_KEY` di platform hosting frontend (Vercel).
-  - `Production Server Key` dimasukkan secara aman ke Supabase Edge Functions Secrets menggunakan `supabase secrets set MIDTRANS_SERVER_KEY=...`.
-- [ ] **Mode Produksi Diaktifkan:**
-  - `VITE_MIDTRANS_IS_PRODUCTION=true`.
-  - Snap script loader memuat `https://app.midtrans.com/snap/snap.js` (bukan `app.sandbox.midtrans.com`).
-- [ ] **Registrasi Webhook URL:**
-  - Masukkan URL webhook produksi pada dashboard Midtrans (Menu *Settings > Configuration > Payment Notification URL*):
-    `https://[project-ref].supabase.co/functions/v1/midtrans-webhook`
-- [ ] **Verifikasi Saluran Pembayaran Aktif:**
-  - Konfirmasi aktivasi kanal pembayaran di dashboard Midtrans (BCA Virtual Account, Mandiri Bill, BNI/BRI VA, QRIS/GoPay, Kartu Kredit).
+  - `QRISGATE_API_KEY` (`qg_live_...`) diambil dari dashboard QRISGate tab *API & Webhook* (hanya ditampilkan sekali) dan dimasukkan secara aman ke Supabase Edge Functions Secrets menggunakan `supabase secrets set QRISGATE_API_KEY=...`.
+  - Tidak ada kunci QRISGate di variabel frontend/Vercel; secret QRISGate tidak boleh berprefix `VITE_`.
+- [ ] **Webhook Secret & URL Terdaftar:**
+  - `QRISGATE_WEBHOOK_SECRET` diset melalui `supabase secrets set QRISGATE_WEBHOOK_SECRET=...`.
+  - URL webhook produksi didaftarkan pada pengaturan webhook QRISGate:
+    `https://[project-ref].supabase.co/functions/v1/qrisgate-webhook`
+- [ ] **Deteksi Pembayaran Merchant Aktif:**
+  - Konfigurasi sisi merchant (bukan kode aplikasi): APK listener Android (notifikasi DANA, BRImo, myBCA, Livin, ShopeePay, GoPay), detektor berbasis sesi (GoPay Merchant / Shopee Partner / BCA Merchant), atau notifikasi email bank.
+  - Khusus merchant GoPay: notifikasi hanya aktif untuk QRIS statis; pembeli memasukkan nominal tepat secara manual pada QR statis yang ditampilkan QRISGate.
+- [ ] **Saldo Kredit Merchant:** Saldo kredit QRISGate mencukupi untuk biaya flat Rp 100 per transaksi sukses (atau langganan opsional yang membebaskan biaya telah aktif). Tidak ada MDR persentase.
 - [ ] **Uji Transaksi Real (Smoke Test):**
-  - Lakukan 1 transaksi uji coba bernilai kecil (misal Rp 10.000) menggunakan akun bank riil untuk memastikan verifikasi SHA-512 dan update status `Soulaide_bookings` serta `Soulaide_payments` berhasil 100%.
+  - Lakukan 1 transaksi uji coba bernilai kecil (misal Rp 10.000 + kode unik), bayar nominal TEPAT `base_amount + unique_code` menggunakan akun bank/e-wallet riil untuk memastikan verifikasi HMAC-SHA256 webhook dan update status `Soulaide_bookings` serta `Soulaide_payments` berhasil 100%.
 
 ---
 
@@ -60,7 +62,7 @@ Sebelum beralih dari Sandbox (`app.sandbox.midtrans.com`) ke Lingkungan Produksi
 ### 4.1 Bundle & Code Splitting
 - **Vite & Rolldown Minification:** Seluruh aset CSS dan JS terkompresi dengan Gzip/Brotli.
 - **React 19 Safe Architecture:** Pemuatan asinkron dengan TanStack React Query mencegah re-render siklikal atau efek samping `setState-in-effect`.
-- **Lazy Loading Asset:** Komponen modal koordinasi sesi, snap checkout, dan modal eskalasi krisis hanya dirender ketika dibutuhkan.
+- **Lazy Loading Asset:** Komponen modal koordinasi sesi, modal pembayaran QRIS (`QrisPaymentModal`), dan modal eskalasi krisis hanya dirender ketika dibutuhkan.
 
 ### 4.2 Standar Aksesibilitas (WCAG 2.1 AA)
 - Rasio kontras warna teks terhadap latar belakang memenuhi standar WCAG (rasio minimal 4.5:1 untuk teks normal).
@@ -92,4 +94,4 @@ supabase db dump --data-only -f soulaide_backup_$(date +%Y%m%d).sql
 
 - **React ErrorBoundary:** Komponen [ErrorBoundary.tsx](file:///F:/Garyudo.my.id/soulaide-webapp/src/components/shared/ErrorBoundary.tsx) mengisolasi galat tak terduga pada antarmuka klien dan menyediakan navigasi pemulihan tanpa mengekspos data medis.
 - **Audit Logging Berkelanjutan:** Setiap perubahan status jadwal booking, pengembalian dana (*refund*), pembaruan peran staf, dan pengubahan kehadiran psikolog dicatat ke tabel `public."Soulaide_audit_logs"`.
-- **Edge Function Logs:** Log eksekusi `create-payment` dan `midtrans-webhook` dapat dipantau langsung melalui Supabase Dashboard (*Edge Functions > Invocations / Logs*).
+- **Edge Function Logs:** Log eksekusi `create-payment` dan `qrisgate-webhook` dapat dipantau langsung melalui Supabase Dashboard (*Edge Functions > Invocations / Logs*).

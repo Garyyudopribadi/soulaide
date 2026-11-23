@@ -18,7 +18,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
 }) => {
   const totalPaid = payments
     .filter((p) => p.status === 'paid')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (p.total_amount ?? p.amount), 0);
 
   return (
     <div className="space-y-6">
@@ -44,7 +44,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
       {payments.length === 0 ? (
         <EmptyState
           title="Belum ada riwayat transaksi"
-          message="Seluruh pembayaran sesi konseling melalui gateway Midtrans akan tercatat secara otomatis di sini."
+          message="Seluruh pembayaran sesi konseling melalui gateway QRISGate akan tercatat secara otomatis di sini."
         />
       ) : (
         <Card className="overflow-hidden border-slate-200">
@@ -72,7 +72,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
                   <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <span className="font-mono font-medium text-slate-800 block text-[11px]">
-                        {p.midtrans_order_id}
+                        {p.provider_order_id}
                       </span>
                       <span className="font-mono text-plum-700 text-[10px]">
                         Booking: {p.booking_code}
@@ -85,7 +85,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
                       </span>
                     </td>
                     <td className="py-3.5 px-4 capitalize text-slate-600">
-                      {p.payment_type || 'Midtrans Snap'}
+                      {p.payment_type || 'QRIS'}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500">
                       {new Date(p.payment_time || p.created_at).toLocaleDateString('id-ID', {
@@ -95,7 +95,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
                       })}
                     </td>
                     <td className="py-3.5 px-4 text-right font-bold text-slate-900">
-                      {formatIDR(p.amount)}
+                      {formatIDR(p.total_amount ?? p.amount)}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <PaymentStatusBadge status={p.status} />

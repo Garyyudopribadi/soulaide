@@ -1,19 +1,20 @@
 import { supabase } from '@/lib/supabase/client.ts';
-import type { MidtransSnapTransactionResponse, PaymentRecord } from './types';
+import type { QrisGatePaymentSession, PaymentRecord } from './types';
 
 export const paymentService = {
   /**
-   * Request payment creation via Supabase Edge Function 'create-payment'.
+   * Request payment creation via Supabase Edge Function 'create-payment' (QRISGate).
    * Price is resolved on the backend from Soulaide_services, never passed from client.
+   * The backend returns the exact total (base price + unique code) and the QR payload.
    */
-  async createPaymentSession(bookingId: string): Promise<MidtransSnapTransactionResponse> {
+  async createPaymentSession(bookingId: string): Promise<QrisGatePaymentSession> {
     try {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: { booking_id: bookingId },
       });
 
-      if (!error && data && data.token) {
-        return data as MidtransSnapTransactionResponse;
+      if (!error && data && data.order_id) {
+        return data as QrisGatePaymentSession;
       }
     } catch {
       // Edge Function unavailable in local-only / static mock environment; proceed to fallback
@@ -42,30 +43,40 @@ export const paymentService = {
     }
 
     const orderId = `SLD-${booking.booking_code}-${Date.now().toString().slice(-6)}`;
-    const mockToken = `mock-snap-${Date.now()}`;
-    const amount = Number(
+    const amount = Math.round(Number(
       booking.delivery_method === 'offline'
         ? (service.price_offline || 0)
         : (service.price_online || 0)
-    );
+    ));
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    // Record pending payment in database
+    // Record pending payment in database (simulation only — no real QR is allocated)
     await supabase
       .from('Soulaide_payments')
       .insert({
         booking_id: booking.id,
         amount,
         status: 'pending',
-        midtrans_order_id: orderId,
+        provider: 'qrisgate',
+        provider_order_id: orderId,
+        unique_code: 0,
+        total_amount: amount,
+        expires_at: expiresAt,
+        payment_type: 'qris',
       });
 
     return {
-      token: mockToken,
-      redirect_url: `https://app.sandbox.midtrans.com/snap/v2/vtweb/${mockToken}`,
       order_id: orderId,
+      transaction_id: null,
       amount,
+      unique_code: 0,
+      total_amount: amount,
+      qr_string: null,
+      qr_image_base64: null,
+      checkout_url: null,
+      expires_at: expiresAt,
       mode: 'mock',
-      message: 'Mode simulasi sandbox. Silakan selesaikan pembayaran.',
+      message: 'Mode simulasi (Edge Function QRISGate tidak aktif). Tidak ada QR asli yang dibuat.',
     };
   },
 
@@ -90,7 +101,8 @@ export const paymentService = {
   },
 
   /**
-   * Verifies payment status directly from database
+   * Verifies payment status directly from database.
+   * The QRISGate webhook updates these rows server-side; the client only reads them.
    */
   async verifyPaymentFromDatabase(bookingId: string): Promise<{
     paymentStatus: string;

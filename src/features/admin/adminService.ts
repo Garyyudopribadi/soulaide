@@ -65,7 +65,7 @@ export const adminService = {
       supabase.from('Soulaide_profiles').select('id, full_name, email, phone_number').in('id', customerIds),
       supabase.from('Soulaide_psychologists').select('id, full_name, credentials').in('id', psychologistIds),
       supabase.from('Soulaide_services').select('id, name, price_online, price_offline').in('id', serviceIds),
-      supabase.from('Soulaide_payments').select('id, booking_id, amount, status, midtrans_order_id').in('booking_id', bookingIds),
+      supabase.from('Soulaide_payments').select('id, booking_id, amount, status, provider_order_id').in('booking_id', bookingIds),
     ]);
 
     const profileMap = new Map((profilesRes.data || []).map((p) => [p.id, p]));
@@ -113,7 +113,7 @@ export const adminService = {
               id: pay.id,
               amount: Number(pay.amount),
               status: pay.status as PaymentStatus,
-              midtrans_order_id: pay.midtrans_order_id,
+              provider_order_id: pay.provider_order_id,
             }
           : null,
       };
@@ -213,8 +213,10 @@ export const adminService = {
         service_name: sName || 'Konseling Psikologi',
         amount: Number(p.amount),
         status: p.status as PaymentStatus,
-        midtrans_order_id: p.midtrans_order_id,
-        midtrans_transaction_id: p.midtrans_transaction_id,
+        provider_order_id: p.provider_order_id,
+        provider_transaction_id: p.provider_transaction_id,
+        unique_code: p.unique_code ?? null,
+        total_amount: p.total_amount != null ? Number(p.total_amount) : null,
         payment_type: p.payment_type,
         payment_time: p.payment_time,
         created_at: p.created_at,

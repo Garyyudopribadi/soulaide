@@ -31,7 +31,7 @@ import {
 import { createBookingAtomic } from './bookingService.ts'
 import { formatIDR } from '@/lib/utils.ts'
 import type { DeliveryMethod, ProfessionalTier } from '@/types/index.ts'
-import { MidtransSnapModal } from '@/features/payments/MidtransSnapModal.tsx'
+import { QrisPaymentModal } from '@/features/payments/QrisPaymentModal.tsx'
 
 export const BookingPage: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -825,7 +825,7 @@ export const BookingPage: React.FC = () => {
 
                 <div className="flex items-center gap-2 text-[11px] text-[#72677E] pt-1">
                   <ShieldCheck className="w-4 h-4 text-plum-600 shrink-0" />
-                  <span>Transaksi aman via Midtrans & dilindungi Kode Etik HIMPSI.</span>
+                  <span>Transaksi aman via QRISGate & dilindungi Kode Etik HIMPSI.</span>
                 </div>
               </CardContent>
             </Card>
@@ -899,11 +899,11 @@ export const BookingPage: React.FC = () => {
                 className="w-full sm:w-auto gap-2 h-11 px-6 rounded-xl"
               >
                 <CreditCard className="w-4 h-4 text-plum-200" />
-                <span>Bayar Sekarang via Midtrans</span>
+                <span>Bayar Sekarang via QRISGate</span>
               </Button>
             </div>
 
-            <MidtransSnapModal
+            <QrisPaymentModal
               isOpen={showPaymentModal}
               onClose={() => setShowPaymentModal(false)}
               bookingId={completedBooking.bookingId}

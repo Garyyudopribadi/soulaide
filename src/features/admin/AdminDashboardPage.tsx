@@ -200,7 +200,7 @@ export const AdminDashboardPage: React.FC = () => {
             eyebrow="Keuangan"
             title="Rekonsiliasi"
             accent="Pembayaran"
-            description="Cocokkan transaksi Midtrans, telusuri status pembayaran, dan proses refund sesuai kebijakan."
+            description="Cocokkan transaksi QRISGate, telusuri status pembayaran, dan proses refund sesuai kebijakan."
           />
           <AdminPaymentsTab
             payments={payments}

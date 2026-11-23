@@ -116,7 +116,7 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       key: 'pending-payment',
       count: pendingPaymentCount,
       title: 'Reservasi menunggu pembayaran',
-      description: 'Pastikan klien menyelesaikan invoice Midtrans sebelum jadwal sesi.',
+      description: 'Pastikan klien menyelesaikan invoice QRIS sebelum jadwal sesi.',
       icon: Wallet,
       tone: 'amber' as const,
       target: 'bookings' as AdminTab,

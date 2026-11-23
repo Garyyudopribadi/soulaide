@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Database } from '@/types/database';
-import { verifyMidtransSignature, mapMidtransStatusToPaymentState } from '@/features/payments/midtransCrypto';
+import { calculateQrisGateSignature, verifyQrisGateSignature, mapQrisGateEventToPaymentState } from '@/features/payments/qrisgateCrypto';
 import { validateSafeWhatsAppContent } from '@/features/chat/whatsappService';
 import { containsEmergencyKeywords, EMERGENCY_HOTLINES } from '@/features/chat/crisisService';
 
@@ -72,43 +72,67 @@ describe('Phase 11 — Security, RLS & Production Readiness Tests', () => {
     });
   });
 
-  describe('Midtrans Server-Authoritative Cryptographic Verification', () => {
-    const mockServerKey = 'SB-Mid-server-testkey123456';
-    const orderId = 'SL-20261122-1001';
-    const statusCode = '200';
-    const grossAmount = '350000.00';
+  describe('QRISGate Server-Authoritative Cryptographic Verification', () => {
+    const webhookSecret = 'whsec_test_secret_123456';
+    const timestamp = 1763880000;
+    const rawBody = JSON.stringify({
+      event: 'payment.paid',
+      external_order_id: 'SL-20261122-1001',
+      total_amount: 350007,
+    });
+    const nowSeconds = timestamp + 10;
 
-    it('verifies valid SHA-512 webhook signature against server key', async () => {
-      // Compute expected hash manually via Web Crypto in test
+    it('verifies valid HMAC-SHA256 webhook signature over timestamp + raw body', async () => {
+      // Compute expected HMAC manually via Web Crypto in test
       const encoder = new TextEncoder();
-      const data = encoder.encode(orderId + statusCode + grossAmount + mockServerKey);
-      const hashBuffer = await crypto.subtle.digest('SHA-512', data);
-      const expectedSignature = Array.from(new Uint8Array(hashBuffer))
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(webhookSecret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const sigBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(`${timestamp}.${rawBody}`));
+      const expectedSignature = Array.from(new Uint8Array(sigBuffer))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
 
-      const isValid = await verifyMidtransSignature(orderId, statusCode, grossAmount, mockServerKey, expectedSignature);
+      const isValid = await verifyQrisGateSignature({
+        timestamp,
+        rawBody,
+        webhookSecret,
+        providedSignature: expectedSignature,
+        nowSeconds,
+      });
       expect(isValid).toBe(true);
+      expect(await calculateQrisGateSignature(timestamp, rawBody, webhookSecret)).toBe(expectedSignature);
     });
 
-    it('rejects tampered signature, wrong amount, or invalid server key', async () => {
+    it('rejects tampered signature, tampered body, or stale timestamp', async () => {
       const tamperedSignature = 'deadbeef1234567890abcdef1234567890abcdef';
-      const isValid = await verifyMidtransSignature(orderId, statusCode, grossAmount, mockServerKey, tamperedSignature);
-      expect(isValid).toBe(false);
+      expect(
+        await verifyQrisGateSignature({ timestamp, rawBody, webhookSecret, providedSignature: tamperedSignature, nowSeconds })
+      ).toBe(false);
 
-      const wrongAmount = '100000.00';
-      const isAmountValid = await verifyMidtransSignature(orderId, statusCode, wrongAmount, mockServerKey, tamperedSignature);
-      expect(isAmountValid).toBe(false);
+      const validSignature = await calculateQrisGateSignature(timestamp, rawBody, webhookSecret);
+      const tamperedBody = rawBody.replace('350007', '100000');
+      expect(
+        await verifyQrisGateSignature({ timestamp, rawBody: tamperedBody, webhookSecret, providedSignature: validSignature, nowSeconds })
+      ).toBe(false);
+
+      expect(
+        await verifyQrisGateSignature({ timestamp, rawBody, webhookSecret, providedSignature: validSignature, nowSeconds: timestamp + 600 })
+      ).toBe(false);
     });
 
-    it('correctly maps all Midtrans transaction statuses to internal payment statuses', () => {
-      expect(mapMidtransStatusToPaymentState('settlement', 'accept').paymentStatus).toBe('paid');
-      expect(mapMidtransStatusToPaymentState('capture', 'accept').paymentStatus).toBe('paid');
-      expect(mapMidtransStatusToPaymentState('pending', undefined).paymentStatus).toBe('pending');
-      expect(mapMidtransStatusToPaymentState('expire', undefined).paymentStatus).toBe('expired');
-      expect(mapMidtransStatusToPaymentState('cancel', undefined).paymentStatus).toBe('failed');
-      expect(mapMidtransStatusToPaymentState('deny', undefined).paymentStatus).toBe('failed');
-      expect(mapMidtransStatusToPaymentState('refund', undefined).paymentStatus).toBe('refunded');
+    it('correctly maps all QRISGate webhook events to internal payment statuses', () => {
+      expect(mapQrisGateEventToPaymentState('payment.paid').paymentStatus).toBe('paid');
+      expect(mapQrisGateEventToPaymentState('payment.paid').bookingStatus).toBe('confirmed');
+      expect(mapQrisGateEventToPaymentState('payment.expired').paymentStatus).toBe('expired');
+      expect(mapQrisGateEventToPaymentState('payment.expired').bookingStatus).toBe('cancelled');
+      expect(mapQrisGateEventToPaymentState('payment.cancelled').paymentStatus).toBe('failed');
+      expect(mapQrisGateEventToPaymentState('payment.cancelled').bookingStatus).toBe('cancelled');
+      expect(mapQrisGateEventToPaymentState('payment.unknown').paymentStatus).toBe('pending');
     });
   });
 
@@ -134,7 +158,8 @@ describe('Phase 11 — Security, RLS & Production Readiness Tests', () => {
       // In Vite, only variables starting with VITE_ are exposed to the client.
       // Server keys must NEVER start with VITE_.
       const forbiddenClientPrefixes = [
-        'VITE_MIDTRANS_SERVER_KEY',
+        'VITE_QRISGATE_API_KEY',
+        'VITE_QRISGATE_WEBHOOK_SECRET',
         'VITE_SUPABASE_SERVICE_ROLE_KEY',
         'VITE_POSTGRES_PASSWORD',
         'VITE_JWT_SECRET',
