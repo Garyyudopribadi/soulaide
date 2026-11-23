@@ -158,6 +158,16 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ conversationId }) => {
   const psych = meta?.psychologist ?? null
   const canChat = Boolean(psych && (psych.isBot || psych.userId))
 
+  // One live activity card per booking: the newest system message carrying its
+  // id. Older activity messages render as plain text so duplicate cards never
+  // mount (and never double-subscribe to the same realtime topic).
+  const latestCardByBooking = new Map<string, string>()
+  for (const m of messages) {
+    if (m.sender_kind === 'system' && typeof m.meta?.booking_id === 'string') {
+      latestCardByBooking.set(m.meta.booking_id, m.id)
+    }
+  }
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
     const text = inputText.trim()
@@ -216,7 +226,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ conversationId }) => {
         ) : (
           messages.map((m) => {
             const bookingId = typeof m.meta?.booking_id === 'string' ? m.meta.booking_id : null
-            if (m.sender_kind === 'system' && bookingId) {
+            if (m.sender_kind === 'system' && bookingId && latestCardByBooking.get(bookingId) === m.id) {
               return (
                 <div key={m.id} className="space-y-1.5">
                   <p className="px-1 text-[10px] font-medium text-[#A79BB5]">

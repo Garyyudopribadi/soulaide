@@ -66,11 +66,11 @@ export const BookingActivityCard: React.FC<BookingActivityCardProps> = ({
   // Live status updates (webhook, admin, other device).
   useEffect(() => {
     const unsubscribe = subscribeToBookings([bookingId], () => {
-      void refetch()
+      void queryClient.invalidateQueries({ queryKey: ['booking-card', bookingId] })
       void queryClient.invalidateQueries({ queryKey: ['booking-card-payment', bookingId] })
     })
     return unsubscribe
-  }, [bookingId, refetch, queryClient])
+  }, [bookingId, queryClient])
 
   const dates = getSelectableDatesWib(14)
   const selectedDate = dates.find((d) => d.dateStr === actionDate)

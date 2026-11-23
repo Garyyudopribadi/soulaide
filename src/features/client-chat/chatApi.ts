@@ -178,6 +178,11 @@ export async function markThreadRead(conversationId: string, userId: string): Pr
     .neq('sender_id', userId)
 }
 
+// Unique suffix per subscription: supabase-js caches channels by topic, and
+// reusing a topic that is still subscribed throws when .on() is called again
+// (e.g. two activity cards for the same booking, or a fast effect re-run).
+let channelSeq = 0
+
 /**
  * Live updates for one thread. Returns an unsubscribe function.
  * INSERT drives new bubbles/cards; UPDATE drives read receipts and payment state.
@@ -187,7 +192,7 @@ export function subscribeToThread(
   handlers: { onInsert?: (msg: ThreadMessage) => void; onUpdate?: (msg: ThreadMessage) => void }
 ): () => void {
   const channel = supabase
-    .channel(`thread:${conversationId}`)
+    .channel(`thread:${conversationId}:${++channelSeq}`)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'Soulaide_messages', filter: `conversation_id=eq.${conversationId}` },
@@ -212,7 +217,7 @@ export function subscribeToBookings(
 ): () => void {
   if (bookingIds.length === 0) return () => {}
   const channel = supabase
-    .channel(`bookings:${bookingIds.join(',')}`)
+    .channel(`bookings:${bookingIds.join(',')}:${++channelSeq}`)
     .on(
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'Soulaide_bookings' },

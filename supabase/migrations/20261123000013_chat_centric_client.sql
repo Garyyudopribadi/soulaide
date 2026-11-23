@@ -764,3 +764,71 @@ BEGIN
   RETURN jsonb_build_object('schedules', v_schedules, 'overrides', v_overrides, 'booked', v_booked);
 END;
 $$;
+-- ------------------------------------------------------------------------------
+-- 10. CHAT RLS FIXES
+-- The original participants SELECT policy queried its own table, causing
+-- infinite policy recursion (42P17) for every non-admin chat read, and the
+-- conversations policy joined cp.conversation_id = cp.id (never true).
+-- A SECURITY DEFINER membership helper breaks the recursion: it runs as the
+-- table owner, so RLS is not re-entered.
+-- ------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public."Soulaide_is_conversation_participant"(
+  p_conversation_id UUID,
+  p_user_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public."Soulaide_conversation_participants"
+    WHERE conversation_id = p_conversation_id AND user_id = p_user_id
+  );
+$$;
+
+DROP POLICY IF EXISTS "Participants can view conversation participants" ON public."Soulaide_conversation_participants";
+CREATE POLICY "Participants can view conversation participants"
+ON public."Soulaide_conversation_participants" FOR SELECT
+USING (
+  user_id = auth.uid()
+  OR public."Soulaide_is_conversation_participant"(conversation_id, auth.uid())
+  OR public."Soulaide_is_admin"(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Participants can view conversations" ON public."Soulaide_conversations";
+CREATE POLICY "Participants can view conversations"
+ON public."Soulaide_conversations" FOR SELECT
+USING (
+  customer_id = auth.uid()
+  OR public."Soulaide_is_conversation_participant"(id, auth.uid())
+  OR public."Soulaide_is_admin"(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Participants can view messages" ON public."Soulaide_messages";
+CREATE POLICY "Participants can view messages"
+ON public."Soulaide_messages" FOR SELECT
+USING (
+  public."Soulaide_is_conversation_participant"(conversation_id, auth.uid())
+  OR public."Soulaide_is_admin"(auth.uid())
+);
+
+DROP POLICY IF EXISTS "Participants can insert messages" ON public."Soulaide_messages";
+CREATE POLICY "Participants can insert messages"
+ON public."Soulaide_messages" FOR INSERT
+WITH CHECK (
+  auth.uid() = sender_id
+  AND public."Soulaide_is_conversation_participant"(conversation_id, auth.uid())
+);
+
+DROP POLICY IF EXISTS "Participants can update message read status" ON public."Soulaide_messages";
+CREATE POLICY "Participants can update message read status"
+ON public."Soulaide_messages" FOR UPDATE
+USING (
+  public."Soulaide_is_conversation_participant"(conversation_id, auth.uid())
+)
+WITH CHECK (
+  public."Soulaide_is_conversation_participant"(conversation_id, auth.uid())
+);
