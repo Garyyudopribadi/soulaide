@@ -25,7 +25,9 @@ export const fallbackServices: ServiceDetail[] = [
     method: 'Online & Tatap Muka (Offline)',
     price: 89000,
     priceOnline: 89000,
-    priceOffline: 200000,
+    // Tarif offline MHCU belum dikonfirmasi (docs/CONTENT_AND_SERVICES.md);
+    // null membuat UI menampilkan CTA kontak, bukan angka placeholder.
+    priceOffline: null,
     deliveryMethods: ['online', 'offline'],
     description:
       'Pemeriksaan kesehatan mental terstruktur dilengkapi 1 sesi konseling pembahasan awal selama 30 menit untuk memahami kondisi emosional, tingkat stres, serta rekomendasi awal.',

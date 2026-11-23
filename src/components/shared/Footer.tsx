@@ -1,16 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import {
-  MapPin,
-  Clock,
-  Mail,
-  Phone,
-  ShieldCheck,
-  AlertTriangle,
-  ArrowUpRight,
-} from 'lucide-react'
+import { MapPin, Clock, Mail, Phone } from 'lucide-react'
 
-const InstagramIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+const InstagramIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
   <svg
     viewBox="0 0 24 24"
     width="24"
@@ -29,230 +21,138 @@ const InstagramIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4'
   </svg>
 )
 
-const ThreadsIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width="24"
-    height="24"
-    fill="currentColor"
-    className={className}
-    aria-hidden="true"
-  >
+const ThreadsIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className={className} aria-hidden="true">
     <path d="M12.186 24C5.467 24 0 18.533 0 11.814 0 5.095 5.467 0 12.186 0c6.719 0 12.186 5.467 12.186 11.814 0 .686-.065 1.365-.19 2.029-.208 1.107-1.196 1.838-2.308 1.63-1.109-.208-1.84-1.197-1.632-2.308a9.47 9.47 0 0 0 .13-1.351c0-5.195-4.225-9.42-9.42-9.42-5.195 0-9.42 4.225-9.42 9.42s4.225 9.42 9.42 9.42c2.81 0 5.434-1.258 7.185-3.418.734-.906 2.06-.98 2.873-.166.814.814.773 2.115-.166 2.873C18.665 22.42 15.534 24 12.186 24z" />
     <path d="M12.186 17.558c-3.172 0-5.744-2.572-5.744-5.744s2.572-5.744 5.744-5.744 5.744 2.572 5.744 5.744c0 .604-.49 1.094-1.094 1.094s-1.094-.49-1.094-1.094c0-1.965-1.591-3.556-3.556-3.556s-3.556 1.591-3.556 3.556 1.591 3.556 3.556 3.556c1.173 0 2.219-.57 2.868-1.455.518-.707 1.488-.868 2.203-.357.715.51.876 1.484.364 2.202-1.206 1.666-3.14 2.723-5.32 2.723z" />
   </svg>
 )
 
-const FacebookIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width="24"
-    height="24"
-    fill="currentColor"
-    className={className}
-    aria-hidden="true"
-  >
+const FacebookIcon: React.FC<{ className?: string }> = ({ className = 'h-4 w-4' }) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" className={className} aria-hidden="true">
     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
   </svg>
 )
 
+const socials = [
+  { href: 'https://instagram.com/soulaide', label: 'Instagram Soulaide', Icon: InstagramIcon },
+  { href: 'https://threads.net/@soulaide', label: 'Threads Soulaide', Icon: ThreadsIcon },
+  { href: 'https://facebook.com/soulaide', label: 'Facebook Soulaide', Icon: FacebookIcon },
+]
+
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-plum-950 text-[#D7CEE0] mt-auto relative overflow-hidden">
-      {/* Subtle Ambient Aura */}
-      <div className="absolute -top-32 right-0 w-96 h-96 rounded-full bg-plum-700/20 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-plum-500/10 blur-3xl pointer-events-none" />
-
-      {/* Upper Crisis Safety Bar */}
-      <div className="border-b border-white/10 bg-[#231333]/90 backdrop-blur-sm py-3.5 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 text-champagne-200 text-center sm:text-left">
-            <AlertTriangle className="w-4 h-4 text-champagne-500 shrink-0" />
-            <span>
-              <strong className="text-white">Layanan Krisis Darurat:</strong> Jika Anda atau orang terdekat berada dalam bahaya, segera hubungi Hotline Kesehatan Jiwa di{' '}
-              <strong className="text-champagne-100">119 ext 8</strong>.
-            </span>
-          </div>
+    <footer className="mt-auto bg-plum-950 text-plum-100">
+      <div className="border-b border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p className="leading-relaxed">
+            <strong className="text-white">Layanan krisis darurat:</strong> jika kamu atau orang
+            terdekat dalam bahaya, segera hubungi Hotline Kesehatan Jiwa{' '}
+            <strong className="text-white">119 ext 8</strong>.
+          </p>
           <a
             href="tel:119"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-champagne-500/15 text-champagne-100 border border-champagne-500/40 font-semibold hover:bg-champagne-500/25 transition-colors shrink-0"
+            className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-white underline underline-offset-4 hover:text-plum-200"
           >
-            <Phone className="w-3.5 h-3.5 text-champagne-200" />
-            Hubungi 119 Bebas Pulsa
+            <Phone className="h-3.5 w-3.5" />
+            Hubungi 119
           </a>
         </div>
       </div>
 
-      {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
-          {/* Brand Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-5">
-            <Link to="/" className="inline-flex items-center gap-3.5 group" aria-label="Beranda Soulaide">
-              <div className="p-2 rounded-2xl bg-white/95 shadow-md transition-transform duration-300 group-hover:scale-105">
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-12">
+          <div className="space-y-4 lg:col-span-5">
+            <Link to="/" className="inline-flex items-center gap-2.5" aria-label="Beranda Soulaide">
+              <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white p-1.5">
                 <img
                   src="/Soulaide Psi Arc Logo.png"
-                  alt="Soulaide Psychology"
-                  className="h-10 w-auto object-contain"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 object-contain"
                 />
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="font-serif text-xl font-semibold text-white tracking-tight">
-                  Soulaide
-                </span>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-plum-300 mt-1">
+              </span>
+              <span className="flex flex-col leading-none">
+                <span className="font-serif text-lg font-semibold text-white">Soulaide</span>
+                <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-plum-300">
                   Counseling Psychology
                 </span>
-              </div>
+              </span>
             </Link>
-
-            <p className="text-sm text-[#B7ABCA] leading-relaxed max-w-sm">
-              Ruang aman dan hangat untuk perjalanan kesehatan mental Anda. Didampingi psikolog klinis berlisensi secara privat, empatik, dan berlandaskan Kode Etik HIMPSI.
+            <p className="max-w-sm text-sm leading-relaxed text-plum-200">
+              Ruang bercerita yang aman dan hangat, didampingi psikolog berlisensi.
+              Sesi online dan tatap muka di Pondok Bambu, Jakarta Timur, berlandaskan
+              Kode Etik HIMPSI.
             </p>
-
-            {/* Social Media */}
-            <div className="flex items-center gap-2.5 pt-1">
-              <a
-                href="https://instagram.com/soulaide"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
-                aria-label="Kunjungi Instagram Soulaide"
-                title="Instagram @soulaide"
-              >
-                <InstagramIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://threads.net/@soulaide"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
-                aria-label="Kunjungi Threads Soulaide"
-                title="Threads @soulaide"
-              >
-                <ThreadsIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://facebook.com/soulaide"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
-                aria-label="Kunjungi Facebook Soulaide"
-                title="Facebook Soulaide"
-              >
-                <FacebookIcon className="w-4 h-4" />
-              </a>
-            </div>
-
-            <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-plum-800/70 border border-plum-400/25 text-plum-200 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-plum-300" /> Standar HIMPSI
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] font-medium">
-                Terverifikasi SIPP
-              </span>
+            <div className="flex items-center gap-2 pt-1">
+              {socials.map(({ href, label, Icon }) => (
+                <a
+                  key={href}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-plum-200 transition-colors duration-150 hover:border-plum-400 hover:text-white"
+                >
+                  <Icon />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Services Column (2 cols) */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-3 lg:col-span-2">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.16em] text-plum-300">
               Layanan
             </h4>
-            <ul className="space-y-2.5 text-sm text-[#C8BCD8]">
-              <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Layanan Konseling Individu
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Layanan MHCU (Check Up)
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Bundling MHCU + Konseling
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li className="pt-1 text-xs text-plum-300/80">
-                Daring & Tatap Muka
-              </li>
+            <ul className="space-y-2 text-sm text-plum-200">
+              <li><Link to="/services" className="hover:text-white">Konseling individu</Link></li>
+              <li><Link to="/services" className="hover:text-white">MHCU (check up)</Link></li>
+              <li><Link to="/services" className="hover:text-white">Bundling MHCU + konseling</Link></li>
+              <li><Link to="/booking" className="hover:text-white">Booking sesi</Link></li>
             </ul>
           </div>
 
-          {/* Navigation Column (2 cols) */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-3 lg:col-span-2">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.16em] text-plum-300">
               Navigasi
             </h4>
-            <ul className="space-y-2.5 text-sm text-[#C8BCD8]">
-              <li>
-                <Link to="/psychologists" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Profil Psikolog
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li>
-                <Link to="/booking" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Reservasi Jadwal
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Pertanyaan Umum
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Kontak & Lokasi
-                  <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
-                </Link>
-              </li>
+            <ul className="space-y-2 text-sm text-plum-200">
+              <li><Link to="/psychologists" className="hover:text-white">Profil psikolog</Link></li>
+              <li><Link to="/faq" className="hover:text-white">Pertanyaan umum</Link></li>
+              <li><Link to="/contact" className="hover:text-white">Kontak dan lokasi</Link></li>
+              <li><Link to="/login" className="hover:text-white">Masuk akun</Link></li>
             </ul>
           </div>
 
-          {/* Clinic Location Column (3 cols) */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="space-y-3 lg:col-span-3">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.16em] text-plum-300">
-              Lokasi Praktik
+              Kontak
             </h4>
-            <div className="space-y-3 text-xs text-[#C8BCD8] leading-relaxed">
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-plum-300 shrink-0 mt-0.5" />
-                <span>Pondok Bambu, Duren Sawit, Jakarta Timur 13430</span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <Clock className="w-4 h-4 text-plum-300 shrink-0 mt-0.5" />
-                <span>Senin – Sabtu (Sesuai Perjanjian)</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-plum-300 shrink-0" />
-                <span>halo@soulaide.id</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-plum-300 shrink-0" />
-                <span>+62 896-3086-9804</span>
-              </div>
-            </div>
+            <ul className="space-y-2.5 text-xs leading-relaxed text-plum-200">
+              <li className="flex items-start gap-2.5">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-plum-300" />
+                Pondok Bambu, Duren Sawit, Jakarta Timur 13430
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-plum-300" />
+                Senin–Sabtu, sesuai perjanjian
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Mail className="h-4 w-4 shrink-0 text-plum-300" />
+                <a href="mailto:halo@soulaide.id" className="hover:text-white">halo@soulaide.id</a>
+              </li>
+              <li className="flex items-center gap-2.5">
+                <Phone className="h-4 w-4 shrink-0 text-plum-300" />
+                <a href="tel:+6289630869804" className="hover:text-white">+62 896-3086-9804</a>
+              </li>
+            </ul>
           </div>
         </div>
 
-        {/* Bottom Copyright */}
-        <div className="mt-14 pt-7 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8E81A1]">
-          <p>© {new Date().getFullYear()} Soulaide Psychology. Hak Cipta Dilindungi Undang-Undang.</p>
-          <div className="flex items-center gap-4">
-            <Link to="/faq" className="hover:text-white transition-colors">Privasi & Kerahasiaan</Link>
-            <span className="opacity-40">•</span>
-            <Link to="/faq" className="hover:text-white transition-colors">Ketentuan Reservasi</Link>
-            <span className="opacity-40">•</span>
-            <Link to="/contact" className="hover:text-white transition-colors">Bantuan</Link>
-          </div>
+        <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-plum-300 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Soulaide Psychology.</p>
+          <p>Psikolog berlisensi SIPP · Kode Etik HIMPSI</p>
         </div>
       </div>
     </footer>

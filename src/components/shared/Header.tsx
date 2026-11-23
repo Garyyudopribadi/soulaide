@@ -1,37 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import {
-  LogOut,
-  LayoutDashboard,
-  Calendar,
-  Menu,
-  X,
-  ShieldCheck,
-  ArrowUpRight,
-  Clock,
-  Phone,
-  Sparkles,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button.tsx'
-import { Badge } from '@/components/ui/badge.tsx'
+import { LogOut, LayoutDashboard, Menu, X, Phone } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth.ts'
 
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user, profile, role, signOut } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
 
   const navLinks = [
     { label: 'Beranda', to: '/' },
-    { label: 'Layanan', to: '/services', badge: '3' },
+    { label: 'Layanan', to: '/services' },
     { label: 'Psikolog', to: '/psychologists' },
     { label: 'FAQ', to: '/faq' },
     { label: 'Kontak', to: '/contact' },
@@ -49,287 +28,179 @@ export const Header: React.FC = () => {
     }
   }
 
-  const getRoleBadgeVariant = () => {
-    switch (role) {
-      case 'admin':
-      case 'super_admin':
-        return 'warning'
-      case 'psychologist':
-        return 'success'
-      default:
-        return 'default'
-    }
-  }
+  const isActive = (to: string) =>
+    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Top Clinical Assurance Micro-Bar (Collapses smoothly on scroll) */}
-      <div
-        className={`hidden lg:block bg-plum-950 text-plum-100/90 border-b border-white/10 transition-all duration-300 overflow-hidden ${
-          scrolled ? 'max-h-0 opacity-0 border-b-0' : 'max-h-10 opacity-100'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 font-medium text-plum-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-plum-300" />
-              <span>Standar Kode Etik HIMPSI &amp; Psikolog Berlisensi SIPP</span>
-            </span>
-            <span className="text-white/20">|</span>
-            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Sesi Daring (Google Meet) &amp; Tatap Muka Pondok Bambu Aktif</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 text-plum-200/90">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-plum-300" />
-              <span>Senin – Sabtu (By Appointment)</span>
-            </span>
-            <span className="text-white/20">|</span>
-            <a
-              href="tel:119"
-              className="inline-flex items-center gap-1 text-champagne-200 hover:text-white font-semibold transition-colors"
-            >
-              <Phone className="w-3 h-3 text-champagne-500" />
-              <span>Hotline Krisis: 119 ext 8</span>
-            </a>
-          </div>
+      {/* Crisis line always visible, calm and static */}
+      <div className="hidden bg-plum-950 text-plum-100 sm:block">
+        <div className="mx-auto flex h-9 max-w-6xl items-center justify-between px-4 text-[11px] sm:px-6 lg:px-8">
+          <span>Senin–Sabtu, sesuai perjanjian</span>
+          <a
+            href="tel:119"
+            className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-plum-200"
+          >
+            <Phone className="h-3 w-3" />
+            Hotline krisis: 119 ext 8
+          </a>
         </div>
       </div>
 
-      {/* Main Glass Navigation Bar */}
-      <div
-        className={`w-full transition-all duration-300 ${
-          scrolled
-            ? 'bg-white/92 backdrop-blur-xl border-b border-[#E5DDD4] shadow-[0_10px_30px_-14px_rgba(41,23,56,0.14)]'
-            : 'bg-white/75 backdrop-blur-lg border-b border-[#EAE3DC]/80'
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-19 flex items-center justify-between gap-4">
-          {/* Brand Logo + Editorial Lockup */}
+      <div className="border-b border-line bg-paper">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link
             to="/"
-            className="flex items-center gap-3 py-1 group focus:outline-hidden focus:ring-2 focus:ring-plum-600/40 rounded-2xl"
+            className="flex items-center gap-2.5"
             aria-label="Beranda Soulaide"
             onClick={() => setMobileMenuOpen(false)}
           >
-            <div className="relative flex items-center justify-center p-1.5 rounded-2xl bg-gradient-to-br from-plum-50 via-white to-plum-100/60 border border-plum-200/70 shadow-2xs group-hover:border-plum-300 group-hover:shadow-sm transition-all">
-              <img
-                src="/Soulaide Psi Arc Logo.png"
-                alt="Soulaide Psychology"
-                className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-            </div>
-            <div className="flex flex-col leading-none">
-              <div className="flex items-center gap-1.5">
-                <span className="font-serif text-xl font-bold tracking-tight text-plum-900">
-                  Soulaide
-                </span>
-                <span className="hidden xl:inline-flex items-center px-1.5 py-0.5 rounded-md bg-plum-50 border border-plum-200/60 text-[9px] font-bold text-plum-700 uppercase tracking-wider">
-                  Psi
-                </span>
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5D728F] mt-1">
+            <img
+              src="/Soulaide Psi Arc Logo.png"
+              alt=""
+              width={40}
+              height={40}
+              className="h-9 w-9 object-contain"
+            />
+            <span className="flex flex-col leading-none">
+              <span className="font-serif text-lg font-semibold text-plum-900">Soulaide</span>
+              <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-ink-soft">
                 Counseling Psychology
               </span>
-            </div>
+            </span>
           </Link>
 
-          {/* Desktop Capsule Navigation */}
-          <nav
-            className="hidden md:flex items-center gap-1 p-1.5 rounded-full bg-[#FAF8F5]/90 border border-[#E5DDD5] shadow-[inset_0_1px_2px_rgba(41,23,56,0.04)]"
-            aria-label="Navigasi Utama"
-          >
-            {navLinks.map((link) => {
-              const isActive =
-                link.to === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(link.to)
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`relative px-4 py-1.5 rounded-full text-sm transition-all duration-200 flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-plum-800 to-plum-700 text-white font-semibold shadow-[0_2px_10px_-2px_rgba(73,46,95,0.45)]'
-                      : 'text-[#4B3F59] hover:text-plum-800 hover:bg-white/80 font-medium'
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  {link.badge && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold leading-tight ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'bg-plum-100 text-plum-700'
-                      }`}
-                    >
-                      {link.badge}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+          <nav className="hidden items-center gap-6 md:flex" aria-label="Navigasi utama">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                aria-current={isActive(link.to) ? 'page' : undefined}
+                className={`border-b-2 pb-0.5 text-sm transition-colors duration-150 ${
+                  isActive(link.to)
+                    ? 'border-plum-700 font-semibold text-plum-800'
+                    : 'border-transparent font-medium text-ink-soft hover:text-plum-800'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
 
-          {/* Right Action Bar */}
-          <div className="hidden md:flex items-center gap-2.5">
+          <div className="hidden items-center gap-2 md:flex">
             {user ? (
-              <div className="flex items-center gap-2">
-                <Link to={getDashboardPath()}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 h-10 px-3.5 rounded-full border-[#E2DAD1] bg-white hover:border-plum-300"
-                  >
-                    <span className="w-6 h-6 rounded-full bg-plum-100 text-plum-700 flex items-center justify-center">
-                      <LayoutDashboard className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="font-semibold text-[#23192D] max-w-[140px] truncate">
-                      {profile?.full_name || user.email?.split('@')[0]}
-                    </span>
-                    <Badge variant={getRoleBadgeVariant()} className="text-[10px] py-0 px-2">
-                      {role || 'klien'}
-                    </Badge>
-                  </Button>
+              <>
+                <Link to={getDashboardPath()} className="btn-outline btn-sm">
+                  <LayoutDashboard className="h-3.5 w-3.5 text-plum-700" />
+                  <span className="max-w-[140px] truncate">
+                    {profile?.full_name || user.email?.split('@')[0]}
+                  </span>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => signOut()}
-                  className="h-10 w-10 p-0 rounded-full text-[#7A6F85] hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="btn-ghost btn-sm"
                   title="Keluar dari akun"
                   aria-label="Keluar dari akun"
                 >
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 px-4 rounded-full text-[#4B3F59] hover:text-plum-800 font-semibold"
-                  >
-                    Masuk
-                  </Button>
+              <>
+                <Link to="/login" className="btn-ghost btn-sm">
+                  Masuk
                 </Link>
-                <Link to="/booking">
-                  <Button
-                    size="sm"
-                    className="gap-2 h-10.5 px-5 rounded-full bg-gradient-to-r from-plum-800 via-plum-700 to-plum-600 hover:from-plum-900 hover:to-plum-700 text-white font-semibold shadow-[0_4px_14px_-3px_rgba(73,46,95,0.5)]"
-                  >
-                    <Calendar className="w-3.5 h-3.5 text-plum-200" />
-                    <span>Booking Sesi</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 opacity-80" />
-                  </Button>
+                <Link to="/booking" className="btn-primary btn-sm">
+                  Booking sesi
                 </Link>
-              </div>
+              </>
             )}
           </div>
 
-          {/* Mobile Action + Menu Button */}
-          <div className="flex md:hidden items-center gap-2">
-            <Link to="/booking">
-              <Button size="sm" className="rounded-full bg-plum-700 text-white text-xs px-3.5 h-9 gap-1">
-                <Sparkles className="w-3 h-3 text-plum-200" />
-                <span>Booking</span>
-              </Button>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link to="/booking" className="btn-primary btn-sm">
+              Booking
             </Link>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white border border-[#E6DFD7] text-[#2E223A] hover:text-plum-700 hover:border-plum-300 focus:outline-hidden focus:ring-2 focus:ring-plum-600/30 transition-colors cursor-pointer"
+              className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-line-strong bg-white text-ink"
               aria-expanded={mobileMenuOpen}
-              aria-label="Buka menu navigasi"
+              aria-label={mobileMenuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-[#EAE3DC] bg-white/98 backdrop-blur-xl px-4 pt-4 pb-6 space-y-4 shadow-2xl">
-          <nav className="flex flex-col space-y-1" aria-label="Navigasi Mobile">
-            {navLinks.map((link) => {
-              const isActive =
-                link.to === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(link.to)
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-between ${
-                    isActive
-                      ? 'bg-plum-50 text-plum-800 border border-plum-200/70'
-                      : 'text-[#4B3F59] hover:bg-sanctuary-100'
-                  }`}
-                >
-                  <span>{link.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-plum-700" />}
-                </Link>
-              )
-            })}
+        <div className="border-b border-line bg-paper px-4 pb-5 pt-3 md:hidden">
+          <nav className="flex flex-col" aria-label="Navigasi mobile">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive(link.to) ? 'page' : undefined}
+                className={`border-b border-line py-3 text-sm font-semibold ${
+                  isActive(link.to) ? 'text-plum-800' : 'text-ink-soft'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
 
-          <div className="pt-3 border-t border-[#F0EAE3] space-y-2.5">
+          <div className="pt-4">
             {user ? (
-              <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2">
                 <Link
                   to={getDashboardPath()}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-sanctuary-100 border border-[#E6DFD7]"
+                  className="btn-outline btn-sm"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <LayoutDashboard className="w-4 h-4 text-plum-700" />
-                    <span className="text-sm font-semibold text-[#23192D]">
-                      {profile?.full_name || user.email}
-                    </span>
-                  </div>
-                  <Badge variant={getRoleBadgeVariant()} className="text-[10px]">
-                    {role || 'klien'}
-                  </Badge>
+                  Dashboard
                 </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => {
                     signOut()
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full justify-center gap-2 text-rose-600 border-rose-200 hover:bg-rose-50"
+                  className="btn-outline btn-sm"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Keluar dari Akun
-                </Button>
+                  Keluar
+                </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
-                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full justify-center rounded-xl">
-                    Masuk
-                  </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-outline btn-sm"
+                >
+                  Masuk
                 </Link>
-                <Link to="/booking" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full justify-center rounded-xl bg-plum-700 hover:bg-plum-800 text-white">
-                    Booking Sesi
-                  </Button>
+                <Link
+                  to="/booking"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-primary btn-sm"
+                >
+                  Booking sesi
                 </Link>
               </div>
             )}
           </div>
 
-          <div className="pt-2 text-center text-xs text-[#7A6F85] flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-plum-600" />
-            <span>Kerahasiaan data terjamin &amp; Kode Etik HIMPSI</span>
-          </div>
+          <a
+            href="tel:119"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-plum-800"
+          >
+            <Phone className="h-3 w-3" />
+            Hotline krisis: 119 ext 8
+          </a>
         </div>
       )}
     </header>

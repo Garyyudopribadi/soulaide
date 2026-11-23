@@ -1,210 +1,128 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Search,
-  ChevronDown,
-  HelpCircle,
-  MessageCircle,
-  X,
-  ShieldCheck,
-  Calendar,
-} from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card.tsx'
-import { Button } from '@/components/ui/button.tsx'
+import { Search, ChevronDown } from 'lucide-react'
 import { useFaqs } from './useFaqs.ts'
+import { useSiteSettings } from './useSiteSettings.ts'
+import { SectionHead } from './components.tsx'
+import { waHref } from './whatsapp.ts'
+
+const CATEGORIES = ['all', 'booking', 'privasi', 'reschedule', 'layanan'] as const
+
+const CATEGORY_LABELS: Record<string, string> = {
+  all: 'Semua',
+  booking: 'Reservasi dan biaya',
+  privasi: 'Kerahasiaan dan data',
+  reschedule: 'Jadwal dan reschedule',
+  layanan: 'Metode dan fasilitas',
+}
 
 export const FaqPage: React.FC = () => {
   const { data: faqs } = useFaqs()
+  const { data: settings } = useSiteSettings()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [openFaqId, setOpenFaqId] = useState<string | null>(null)
 
-  const categories = ['all', 'booking', 'privasi', 'reschedule', 'layanan']
-
-  const categoryLabels: Record<string, string> = {
-    all: 'Semua Pertanyaan',
-    booking: 'Reservasi & Biaya',
-    privasi: 'Kerahasiaan & Data',
-    reschedule: 'Jadwal & Reschedule',
-    layanan: 'Metode & Fasilitas',
-  }
-
-  const filteredFaqs = faqs.filter((faq) => {
-    const matchesCategory =
-      selectedCategory === 'all' || faq.category.toLowerCase() === selectedCategory.toLowerCase()
-    const matchesSearch =
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
+  const filtered = faqs.filter((f) => {
+    const q = searchQuery.trim().toLowerCase()
+    const matchQuery =
+      q === '' || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
+    const matchCategory = selectedCategory === 'all' || f.category === selectedCategory
+    return matchQuery && matchCategory
   })
 
-  const toggleFaq = (id: string) => {
-    setOpenFaqId((prev) => (prev === id ? null : id))
-  }
-
   return (
-    <div className="pb-20 space-y-12">
-      {/* =====================================================================
-          ENHANCED FAQ HERO HEADER
-         ===================================================================== */}
-      <section className="relative w-full overflow-hidden border-b border-[#E5DDD4] soulaide-hero-mesh pt-12 pb-16">
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 border border-plum-200/80 text-plum-800 text-xs font-semibold shadow-2xs backdrop-blur-sm">
-            <HelpCircle className="w-3.5 h-3.5 text-plum-600" />
-            <span>Pusat Informasi &amp; Bantuan Klien</span>
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-[#1E1429] tracking-tight">
-            Pertanyaan yang{' '}
-            <span className="font-serif italic font-semibold text-plum-700">Sering Diajukan</span>
-          </h1>
-          <p className="text-sm sm:text-base text-[#554B61] max-w-2xl mx-auto leading-relaxed">
-            Temukan jawaban transparan mengenai reservasi, perbedaan Soul Guidance &amp; Soul Expert, privasi klinis, dan ketentuan perubahan jadwal.
-          </p>
+    <div>
+      <section className="border-b border-line">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+          <SectionHead
+            as="h1"
+            kicker="FAQ"
+            title="Pertanyaan yang sering diajukan."
+            lead="Kalau jawabanmu belum ada di sini, admin kami senang membantu via WhatsApp."
+          />
         </div>
       </section>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Search & Category Filter */}
-        <div className="space-y-4 bg-white p-5 sm:p-6 rounded-3xl border border-[#EAE3DC] shadow-[0_12px_36px_-18px_rgba(41,23,56,0.12)]">
-          <div className="relative">
-            <Search className="w-4.5 h-4.5 text-[#8A7E96] absolute left-4 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Ketik kata kunci (misal: reschedule, tatap muka, privasi, laporan MHCU)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-10 py-3 text-sm border border-[#E5DDD5] rounded-2xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-100/70 focus:bg-white transition-all"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-[#8A7E96] hover:text-[#23192D] cursor-pointer"
-                aria-label="Hapus pencarian"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-plum-700 text-white shadow-xs'
-                      : 'bg-sanctuary-100 text-[#52475E] hover:bg-plum-50 border border-[#EAE3DC]'
-                  }`}
-                >
-                  {categoryLabels[cat] || cat}
-                </button>
-              )
-            })}
-          </div>
+      <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari pertanyaan..."
+            aria-label="Cari pertanyaan"
+            className="field pl-10"
+          />
         </div>
 
-        {/* FAQ Accordion List */}
-        <div className="space-y-3">
-          {filteredFaqs.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border border-[#EAE3DC] p-8 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-plum-50 text-plum-400 flex items-center justify-center mx-auto">
-                <HelpCircle className="w-6 h-6" />
-              </div>
-              <h3 className="font-bold text-[#1E1429]">Pertanyaan tidak ditemukan</h3>
-              <p className="text-xs text-[#645A70]">
-                Coba gunakan kata kunci pencarian yang lain atau tanyakan langsung pada tim kami.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchQuery('')
-                  setSelectedCategory('all')
-                }}
-              >
-                Tampilkan Semua FAQ
-              </Button>
-            </div>
-          ) : (
-            filteredFaqs.map((faq) => {
-              const isOpen = openFaqId === faq.id
-              return (
-                <Card
-                  key={faq.id}
-                  className={`border transition-all duration-200 rounded-2xl overflow-hidden ${
-                    isOpen
-                      ? 'border-plum-300 shadow-[0_12px_30px_-16px_rgba(73,46,95,0.2)] bg-white'
-                      : 'border-[#EAE3DC] hover:border-plum-200 bg-white'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleFaq(faq.id)}
-                    className="w-full text-left p-5 flex items-center justify-between gap-4 cursor-pointer focus:outline-hidden focus:bg-sanctuary-100/70"
-                    aria-expanded={isOpen}
-                  >
-                    <span className="text-sm sm:text-base font-bold text-[#1E1429] leading-snug">
-                      {faq.question}
-                    </span>
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${
-                        isOpen
-                          ? 'bg-plum-700 text-white rotate-180'
-                          : 'bg-sanctuary-100 text-[#645A70] border border-[#EAE3DC]'
-                      }`}
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </button>
-                  {isOpen && (
-                    <CardContent className="pt-0 pb-5 px-5 text-sm text-[#5A5066] leading-relaxed border-t border-[#F2ECE6]">
-                      <p className="pt-4">{faq.answer}</p>
-                    </CardContent>
-                  )}
-                </Card>
-              )
-            })
-          )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              aria-pressed={selectedCategory === c}
+              className={`chip ${selectedCategory === c ? 'chip-active' : ''}`}
+            >
+              {CATEGORY_LABELS[c]}
+            </button>
+          ))}
         </div>
 
-        {/* Support Box */}
-        <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-plum-900 to-plum-800 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg">
-          <div className="space-y-1.5 text-center sm:text-left">
-            <div className="inline-flex items-center gap-1.5 text-xs text-plum-200 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-champagne-200" />
-              <span>Layanan Bantuan Klien Soulaide</span>
-            </div>
-            <h4 className="font-bold text-lg text-white">
-              Belum menemukan jawaban yang Anda cari?
-            </h4>
-            <p className="text-xs sm:text-sm text-plum-100/80 leading-relaxed">
-              Care Coordinator kami siap membantu menjelaskan secara ramah melalui WhatsApp resmi Soulaide.
+        <div className="mt-8 divide-y divide-line border-y border-line">
+          {filtered.length === 0 && (
+            <p className="py-10 text-center text-sm text-ink-soft">
+              Tidak ada pertanyaan yang cocok. Coba kata kunci lain.
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Link to="/contact">
-              <Button className="gap-2 rounded-full px-5 bg-white text-plum-900 hover:bg-sanctuary-100">
-                <MessageCircle className="w-4 h-4 text-plum-700" />
-                <span>Tanya Tim Soulaide</span>
-              </Button>
-            </Link>
-            <Link to="/booking">
-              <Button
-                variant="outline"
-                className="gap-1.5 rounded-full px-5 border-white/25 bg-white/10 text-white hover:bg-white/20"
-              >
-                <Calendar className="w-4 h-4" />
-                <span>Booking</span>
-              </Button>
+          )}
+          {filtered.map((f) => {
+            const open = openFaqId === f.id
+            return (
+              <div key={f.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenFaqId(open ? null : f.id)}
+                  aria-expanded={open}
+                  aria-controls={`faq-panel-${f.id}`}
+                  className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-ink hover:text-plum-800"
+                >
+                  {f.question}
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-plum-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                <div id={`faq-panel-${f.id}`} className="acc-panel" data-open={open}>
+                  <div>
+                    <p className="pb-5 text-sm leading-relaxed text-ink-soft">{f.answer}</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-10 rounded-xl bg-plum-50 px-6 py-8 text-center">
+          <h2 className="display text-xl sm:text-2xl">Masih ada yang mengganjal?</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
+            Tanya langsung ke admin. Tidak ada pertanyaan yang dianggap sepele.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <a
+              href={waHref(settings.whatsappNumber, settings.defaultMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary"
+            >
+              Chat WhatsApp
+            </a>
+            <Link to="/contact" className="btn-outline">
+              Halaman kontak
             </Link>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   )
 }
