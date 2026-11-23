@@ -1,7 +1,8 @@
 /**
  * Inline QRIS payment card for the chat thread.
  * Adapted from QrisPaymentModal: server-created dynamic QR, exact total with
- * unique code, 1s countdown tick, 5s status polling, session reuse on retry.
+ * unique code, 1s countdown tick, 15s provider reconciliation poll (recovers
+ * missed webhooks), session reuse on retry.
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
@@ -24,7 +25,7 @@ import type { QrisGatePaymentSession } from '@/features/payments/types'
 import type { CustomerBookingRecord } from '@/features/booking/bookingService'
 import { formatRupiah } from './wib.ts'
 
-const POLL_INTERVAL_MS = 5000
+const POLL_INTERVAL_MS = 15000
 
 function formatCountdown(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60)
@@ -67,7 +68,7 @@ export const PaymentCard: React.FC<PaymentCardProps> = ({ booking, onPaid, onOpe
     async (manual = false) => {
       if (manual) setVerifying(true)
       try {
-        const status = await paymentService.verifyPaymentFromDatabase(booking.id)
+        const status = await paymentService.verifyPaymentStatus(booking.id)
         setDbPaymentStatus(status.paymentStatus)
         if (status.paymentStatus === 'paid' || status.bookingStatus === 'confirmed') {
           setVerifiedPaid(true)

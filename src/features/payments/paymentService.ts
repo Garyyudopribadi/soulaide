@@ -52,13 +52,25 @@ export const paymentService = {
   },
 
   /**
-   * Verifies payment status directly from database.
-   * The QRISGate webhook updates these rows server-side; the client only reads them.
+   * Verifies payment status server-side. The RPC reconciles pending payments
+   * directly against QRISGate (webhook miss recovery) and returns local state
+   * for terminal rows. Falls back to reading local rows if the RPC fails.
    */
-  async verifyPaymentFromDatabase(bookingId: string): Promise<{
+  async verifyPaymentStatus(bookingId: string): Promise<{
     paymentStatus: string;
     bookingStatus: string;
   }> {
+    const rpc = supabase.rpc.bind(supabase) as unknown as (
+      fn: string,
+      args?: Record<string, unknown>
+    ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+    const { data, error } = await rpc('Soulaide_check_payment_status', { p_booking_id: bookingId });
+    const result = data as { success?: boolean; payment_status?: string; booking_status?: string } | null;
+    if (!error && result?.success && result.payment_status && result.booking_status) {
+      return { paymentStatus: result.payment_status, bookingStatus: result.booking_status };
+    }
+
     const { data: booking } = await supabase
       .from('Soulaide_bookings')
       .select('status')

@@ -59,7 +59,7 @@ export const QrisPaymentModal: React.FC<QrisPaymentModalProps> = ({
   const checkStatus = useCallback(async (manual = false) => {
     if (manual) setVerifying(true);
     try {
-      const status = await paymentService.verifyPaymentFromDatabase(bookingId);
+      const status = await paymentService.verifyPaymentStatus(bookingId);
       setDbPaymentStatus(status.paymentStatus);
       if (status.paymentStatus === 'paid' || status.bookingStatus === 'confirmed') {
         setVerifiedPaid(true);
