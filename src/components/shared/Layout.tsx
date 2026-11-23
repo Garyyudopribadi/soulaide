@@ -18,10 +18,13 @@ export const Layout: React.FC = () => {
   }, [pathname])
 
   if (isWorkspace) {
+    // The client workspace is a full-screen app with its own coordination
+    // affordances; the floating widget would cover its composer.
+    const isClientApp = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
     return (
       <div className="min-h-screen bg-[#F7F4EF] text-[#23192D]">
         <Outlet />
-        <FloatingCommunicationsWidget />
+        {!isClientApp && <FloatingCommunicationsWidget />}
       </div>
     )
   }

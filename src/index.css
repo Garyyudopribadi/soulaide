@@ -230,6 +230,22 @@
   scrollbar-width: none;
 }
 
+/* Quiet scrollbars for app panes (thread list, transcripts) */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #D4C8BC;
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #D4C8BC transparent;
+}
+
 /* ==========================================================================
    Public site layer — "Ruang Bercerita" (flat, calm, editorial)
    Dashboard/auth keep the legacy surfaces above; public pages use these.

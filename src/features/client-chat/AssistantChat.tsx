@@ -10,7 +10,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Loader2, Lock, Send } from 'lucide-react'
+import { ArrowLeft, Loader2, Lock, Send } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
 import { createBookingAtomic } from '@/features/booking/bookingService'
 import {
@@ -55,6 +55,8 @@ interface LocalMsg {
 
 interface AssistantChatProps {
   seed?: { serviceId?: string; psychologistId?: string }
+  /** Render the thread header (client workspace). The public /booking page has its own heading. */
+  showHeader?: boolean
 }
 
 const CRISIS_PATTERN = /bunuh diri|ingin mati|mengakhiri hidup|menyakiti diri|self.?harm|suicide|tidak ingin hidup|darurat/i
@@ -72,7 +74,7 @@ function loadDraft(key: string): FlowState {
   }
 }
 
-export const AssistantChat: React.FC<AssistantChatProps> = ({ seed }) => {
+export const AssistantChat: React.FC<AssistantChatProps> = ({ seed, showHeader = false }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -570,6 +572,25 @@ export const AssistantChat: React.FC<AssistantChatProps> = ({ seed }) => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {showHeader && (
+        <div className="flex items-center gap-3 border-b border-[#E8E1D9] bg-white/70 px-4 py-3">
+          <Link
+            to="/dashboard"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-plum-700 transition-colors hover:bg-plum-50 md:hidden"
+            aria-label="Kembali ke daftar percakapan"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <BotAvatar className="h-10 w-10" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-plum-950">Asisten Soulaide</p>
+            <p className="truncate text-[10px] font-medium text-[#72677E]">
+              Booking & pembayaran QRIS · bukan konseling
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Transcript */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {!transcriptLoaded && (

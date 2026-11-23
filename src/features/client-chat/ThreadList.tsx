@@ -1,20 +1,34 @@
 /**
- * Client home: the thread list. One assistant thread (pinned) plus one thread
- * per psychologist, each carrying its booking/payment activity.
+ * Thread list pane of the client workspace: pinned assistant thread plus one
+ * thread per psychologist, with search and unread badges. Rows navigate; the
+ * active row is highlighted by the parent route.
  */
 
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Loader2, MessageCirclePlus, ChevronRight, Sparkles } from 'lucide-react'
+import { Loader2, MessageCirclePlus, Search, Sparkles } from 'lucide-react'
 import { useAuth } from '@/features/auth/useAuth'
+import { cn } from '@/lib/utils'
+import { CrisisDisclaimerBanner } from '@/features/chat/CrisisDisclaimerBanner.tsx'
 import { fetchThreads } from './chatApi.ts'
 import { BotAvatar, formatThreadTime } from './ChatBits.tsx'
 
-export const ThreadList: React.FC = () => {
+interface ThreadListPaneProps {
+  activeThreadId?: string | null
+  assistantActive?: boolean
+}
+
+const rowBase =
+  'flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors duration-150 hover:bg-sanctuary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-plum-300'
+
+export const ThreadListPane: React.FC<ThreadListPaneProps> = ({
+  activeThreadId,
+  assistantActive,
+}) => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [query, setQuery] = useState('')
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ['client-threads', user?.id],
@@ -27,114 +41,147 @@ export const ThreadList: React.FC = () => {
   const assistant = threads.find((t) => t.kind === 'assistant')
   const psychThreads = threads.filter((t) => t.kind === 'psychologist')
 
-  const openAssistant = async () => {
-    if (assistant) {
-      navigate(`/dashboard/thread/${assistant.id}`)
-    } else {
-      navigate('/booking')
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-plum-400" />
-      </div>
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return psychThreads
+    return psychThreads.filter(
+      (t) =>
+        (t.psychologist?.fullName || '').toLowerCase().includes(q) ||
+        (t.lastMessage?.content || '').toLowerCase().includes(q)
     )
-  }
+  }, [psychThreads, query])
+
+  const openAssistant = () => navigate('/dashboard/assistant')
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl font-bold text-plum-950">Percakapan Anda</h1>
-          <p className="mt-1 text-xs leading-relaxed text-[#72677E]">
-            Booking, pembayaran, dan koordinasi sesi hidup dalam satu thread per psikolog.
-          </p>
-        </div>
-        <Button size="sm" onClick={() => void openAssistant()} className="shrink-0 gap-1.5 text-xs">
-          <MessageCirclePlus className="h-3.5 w-3.5" />
-          Pesan sesi
-        </Button>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Pane header */}
+      <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-4">
+        <h1 className="font-serif text-lg font-bold text-plum-950">Percakapan</h1>
+        <button
+          type="button"
+          onClick={openAssistant}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-plum-700 text-white shadow-2xs transition-colors hover:bg-plum-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-plum-300"
+          aria-label="Pesan sesi baru lewat asisten"
+          title="Pesan sesi"
+        >
+          <MessageCirclePlus className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* Assistant thread */}
-      <button
-        type="button"
-        onClick={() => void openAssistant()}
-        className="flex w-full items-center gap-3 rounded-2xl border border-plum-200 bg-gradient-to-r from-plum-50 to-white p-4 text-left shadow-2xs transition-all hover:border-plum-300 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-plum-300"
-      >
-        <BotAvatar className="h-12 w-12" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-plum-950">Asisten Soulaide</p>
-            <span className="inline-flex items-center gap-1 rounded-full bg-champagne-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-champagne-700">
-              <Sparkles className="h-2.5 w-2.5" />
-              Booking
-            </span>
-          </div>
-          <p className="mt-0.5 truncate text-[11px] text-[#72677E]">
-            {assistant?.lastMessage?.content || 'Mulai pemesanan sesi: layanan, psikolog, jadwal, bayar QRIS.'}
-          </p>
+      {/* Search */}
+      <div className="px-4 pb-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#A79BB5]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari psikolog atau pesan..."
+            aria-label="Cari percakapan"
+            className="h-9 w-full rounded-xl border border-[#DDD5CC] bg-sanctuary-50 pl-9 pr-3 text-xs text-plum-950 placeholder:text-[#A79BB5] focus:border-plum-400 focus:outline-none focus:ring-2 focus:ring-plum-100"
+          />
         </div>
-        {assistant && assistant.unreadCount > 0 && (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-plum-700 px-1.5 text-[10px] font-extrabold text-white">
-            {assistant.unreadCount}
-          </span>
-        )}
-        <ChevronRight className="h-4 w-4 shrink-0 text-plum-300" />
-      </button>
+      </div>
 
-      {/* Psychologist threads */}
-      {psychThreads.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#DDD5CC] bg-white/60 p-6 text-center">
-          <p className="text-sm font-semibold text-plum-900">Belum ada thread psikolog</p>
-          <p className="mx-auto mt-1 max-w-sm text-[11px] leading-relaxed text-[#72677E]">
-            Setelah booking pertama dibuat, thread dengan psikolog Anda muncul di sini beserta kartu
-            pembayaran dan status sesi.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {psychThreads.map((t) => (
+      {/* Rows */}
+      <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-2">
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-plum-400" />
+          </div>
+        ) : (
+          <>
             <button
-              key={t.id}
               type="button"
-              onClick={() => navigate(`/dashboard/thread/${t.id}`)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-[#E8E1D9] bg-white p-3.5 text-left shadow-2xs transition-all hover:border-plum-300 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-plum-300"
+              onClick={openAssistant}
+              aria-current={assistantActive ? 'page' : undefined}
+              className={cn(rowBase, assistantActive && 'bg-plum-50 hover:bg-plum-50')}
             >
-              {t.psychologist?.isBot ? (
-                <BotAvatar className="h-11 w-11" />
-              ) : (
-                <img
-                  src={t.psychologist?.cardImage || '/Soulaide Psi Arc Logo.png'}
-                  alt=""
-                  className="h-11 w-11 rounded-xl border border-[#E8E1D9] object-cover"
-                />
-              )}
+              <BotAvatar className="h-12 w-12 rounded-full" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-sm font-bold text-plum-950">
-                    {t.psychologist?.fullName || 'Psikolog Soulaide'}
+                  <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold text-plum-950">
+                    Asisten Soulaide
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-champagne-100 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-champagne-700">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      Booking
+                    </span>
                   </p>
-                  <span className="shrink-0 text-[10px] font-medium tabular-nums text-[#A79BB5]">
-                    {formatThreadTime(t.updatedAt)}
-                  </span>
+                  {assistant && (
+                    <span className="shrink-0 text-[10px] font-medium tabular-nums text-[#A79BB5]">
+                      {formatThreadTime(assistant.updatedAt)}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-[#72677E]">
-                  {t.lastMessage?.content || 'Thread aktif'}
+                  {assistant?.lastMessage?.content || 'Mulai pemesanan sesi: layanan, psikolog, jadwal, bayar QRIS.'}
                 </p>
               </div>
-              {t.unreadCount > 0 && (
+              {assistant && assistant.unreadCount > 0 && (
                 <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-plum-700 px-1.5 text-[10px] font-extrabold text-white">
-                  {t.unreadCount}
+                  {assistant.unreadCount}
                 </span>
               )}
-              <ChevronRight className="h-4 w-4 shrink-0 text-plum-300" />
             </button>
-          ))}
-        </div>
-      )}
+
+            {filtered.length === 0 ? (
+              <div className="px-3 py-8 text-center">
+                <p className="text-xs font-semibold text-plum-900">
+                  {query.trim() ? 'Tidak ada hasil untuk pencarian ini' : 'Belum ada thread psikolog'}
+                </p>
+                <p className="mx-auto mt-1 max-w-[240px] text-[11px] leading-relaxed text-[#72677E]">
+                  {query.trim()
+                    ? 'Coba nama psikolog atau kata lain dari pesan terakhir.'
+                    : 'Setelah booking pertama dibuat, thread dengan psikolog Anda muncul di sini beserta kartu pembayaran dan status sesi.'}
+                </p>
+              </div>
+            ) : (
+              filtered.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => navigate(`/dashboard/thread/${t.id}`)}
+                  aria-current={activeThreadId === t.id ? 'page' : undefined}
+                  className={cn(rowBase, activeThreadId === t.id && 'bg-plum-50 hover:bg-plum-50')}
+                >
+                  {t.psychologist?.isBot ? (
+                    <BotAvatar className="h-12 w-12 rounded-full" />
+                  ) : (
+                    <img
+                      src={t.psychologist?.cardImage || '/Soulaide Psi Arc Logo.png'}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-full border border-[#E8E1D9] object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-sm font-bold text-plum-950">
+                        {t.psychologist?.fullName || 'Psikolog Soulaide'}
+                      </p>
+                      <span className="shrink-0 text-[10px] font-medium tabular-nums text-[#A79BB5]">
+                        {formatThreadTime(t.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-[#72677E]">
+                      {t.lastMessage?.content || 'Thread aktif'}
+                    </p>
+                  </div>
+                  {t.unreadCount > 0 && (
+                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-plum-700 px-1.5 text-[10px] font-extrabold text-white">
+                      {t.unreadCount}
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Crisis line stays visible while browsing */}
+      <div className="border-t border-[#E8E1D9] px-4 py-3">
+        <CrisisDisclaimerBanner compact />
+      </div>
     </div>
   )
 }

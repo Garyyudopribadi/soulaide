@@ -4,9 +4,10 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import { Loader2, MessageCircle, Send } from 'lucide-react'
+import { ArrowLeft, Loader2, MessageCircle, Send } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client.ts'
 import { useAuth } from '@/features/auth/useAuth'
 import { fetchBookingById } from '@/features/booking/bookingService'
@@ -152,7 +153,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ conversationId }) => {
   }
 
   if (meta?.kind === 'assistant') {
-    return <AssistantChat />
+    return <AssistantChat showHeader />
   }
 
   const psych = meta?.psychologist ?? null
@@ -190,6 +191,13 @@ export const ThreadView: React.FC<ThreadViewProps> = ({ conversationId }) => {
     <div className="flex h-full min-h-0 flex-col">
       {/* Thread header */}
       <div className="flex items-center gap-3 border-b border-[#E8E1D9] bg-white/70 px-4 py-3">
+        <Link
+          to="/dashboard"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-plum-700 transition-colors hover:bg-plum-50 md:hidden"
+          aria-label="Kembali ke daftar percakapan"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         {psych?.isBot ? (
           <BotAvatar className="h-10 w-10" />
         ) : psych ? (
