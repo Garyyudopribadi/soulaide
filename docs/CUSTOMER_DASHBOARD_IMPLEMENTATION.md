@@ -13,19 +13,41 @@ Portal Klien (Customer Dashboard) Soulaide dirancang sebagai *hub* terintegrasi 
 
 ---
 
-## 2. Struktur Modul & Komponen
+## 2. Workspace Shell & Information Architecture
+
+Portal klien memakai `DashboardShell` bersama sehingga header publik dan tab horizontal
+digantikan sidebar yang tenang dan fokus.
+
+- Navigasi dikelompokkan menjadi **Ringkasan**, **Layanan**, dan **Akun**.
+- Badge sidebar menandai sesi mendatang, tagihan tertunda, dan notifikasi belum dibaca.
+- Mobile memakai drawer aksesibel dengan backdrop, Escape, dan scroll lock.
+- Top bar menyediakan akses cepat ke notifikasi dan situs publik.
+
+Tab portal:
+
+- `overview`: Beranda saya
+- `sessions`: Sesi konseling
+- `payments`: Tagihan & kwitansi
+- `profile`: Profil & consent
+- `notifications`: Notifikasi
+
+## 3. Struktur Modul & Komponen
 
 Modul portal klien diimplementasikan di `src/features/customer/`:
 
 1. **`CustomerDashboardPage.tsx`:**
-   - Halaman utama portal dengan banner sambutan dan ringkasan KPI (Sesi Aktif Mendatang, Sesi Selesai, Transaksi Lunas, Notifikasi Baru).
-   - *Tab Switcher* responsif:
-     - `sessions`: Tab Manajemen Sesi Konseling
-     - `payments`: Tab Riwayat Tagihan & Kwitansi
-     - `profile`: Tab Profil Klien & Informed Consent
-     - `notifications`: Tab Kotak Masuk Notifikasi
+   - Halaman utama portal dengan shell, ringkasan KPI (Sesi Mendatang, Sesi Selesai,
+     Total Pembayaran Lunas, Notifikasi Baru), dan navigasi role-aware.
+   - Dialog reschedule kini berupa modal terfokus dengan informasi kebijakan yang jelas.
 
-2. **`CustomerSessionsTab.tsx`:**
+2. **`CustomerOverviewTab.tsx`:**
+   - Hero sesi berikutnya dengan aksi bayar, buka ruang online, atau chat koordinasi.
+   - Antrean perhatian: pembayaran tertunda, notifikasi baru, kelengkapan profil, dan
+     informed consent.
+   - Daftar sesi mendatang, transaksi terakhir, progres profil, ringkasan kontak darurat,
+     serta akses bantuan.
+
+3. **`CustomerSessionsTab.tsx`:**
    - Filter sub-kategori: *Sesi Mendatang*, *Riwayat Sesi*, dan *Semua Sesi*.
    - Filter pencarian berbasis kode booking, nama psikolog, atau judul layanan.
    - Tombol dinamis sesuai status sesi:
@@ -35,30 +57,30 @@ Modul portal klien diimplementasikan di `src/features/customer/`:
      - *Reschedule* (validasi batas minimal 8 jam sebelum sesi)
      - *Batalkan Sesi*
 
-3. **`CustomerPaymentsTab.tsx` & `CustomerReceiptModal.tsx`:**
+4. **`CustomerPaymentsTab.tsx` & `CustomerReceiptModal.tsx`:**
    - Menampilkan daftar transaksi dari tabel database `Soulaide_payments`.
    - Ringkasan akumulasi pengeluaran konseling yang berstatus lunas.
    - Modal kwitansi elektronik resmi lengkap dengan No. Kwitansi (Order ID), nama layanan, tanggal bayar, segel lunas terverifikasi, dan fitur *Print / Save PDF*.
 
-4. **`CustomerProfileTab.tsx`:**
+5. **`CustomerProfileTab.tsx`:**
    - Formulir update identitas dasar (Nama, No. WhatsApp).
    - Formulir data demografis & kontak darurat (Tanggal lahir, jenis kelamin, pekerjaan, nama kontak darurat, no. telepon, hubungan).
    - Arsip dokumen persetujuan (*Informed Consent*) dari tabel `Soulaide_consent_records`.
    - Penjelasan klausul privasi isolasi RLS (Row Level Security) yang menegaskan bahwa staf administrasi umum dilarang mengakses catatan klinis klien.
 
-5. **`CustomerNotificationsTab.tsx`:**
+6. **`CustomerNotificationsTab.tsx`:**
    - Daftar notifikasi pengguna dari tabel `Soulaide_notifications`.
    - Indikator pesan belum dibaca dan tombol aksi *Tandai Semua Dibaca*.
    - Navigasi otomatis jika notifikasi menyertakan tautan aksi.
 
-6. **`CustomerChatModal.tsx`:**
+7. **`CustomerChatModal.tsx`:**
    - Ruang koordinasi pesan pra-sesi antara klien dan psikolog pendamping.
    - **Klausul Wajib Tanggap Darurat (Crisis Disclaimer):**
      Menegaskan bahwa fitur chat ini murni untuk koordinasi teknis, BUKAN penanganan gawat darurat atau konseling medis. Klien yang berada dalam krisis darurat mental medis diarahkan langsung ke Hotline Kemenkes 119 ext. 8 atau IGD rumah sakit terdekat.
 
 ---
 
-## 3. Layanan & Integrasi Database (`customerService.ts`)
+## 4. Layanan & Integrasi Database (`customerService.ts`)
 
 - `fetchCustomerClientProfile(userId)`: Mengambil data profil klien dari `public."Soulaide_client_profiles"`.
 - `updateCustomerClientProfile(userId, profileData)`: Melakukan upsert data demografis dan kontak darurat.
@@ -70,10 +92,12 @@ Modul portal klien diimplementasikan di `src/features/customer/`:
 
 ---
 
-## 4. Hasil Pengujian Unit
+## 5. Hasil Pengujian Unit
 
 Seluruh pengujian fungsionalitas dan logika bisnis pada `src/features/customer/customer.test.ts` berhasil:
 - Pemisahan akurat antara sesi mendatang dan riwayat sesi lampau.
 - Pencarian dan pemfilteran multi-parameter (kode booking, psikolog, layanan).
 - Kalkulasi total pembayaran yang hanya mengakumulasi transaksi berstatus `paid`.
 - Perhitungan akurat notifikasi yang belum dibaca (*unread counter*).
+- Helper bersama di `src/lib/dashboard.test.ts` menguji jendela 7 hari, penghitungan sesi per
+  tanggal, label tanggal relatif, format waktu, inisial, dan kelengkapan profil.

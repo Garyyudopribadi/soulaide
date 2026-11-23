@@ -4,13 +4,27 @@ import { Header } from './Header.tsx'
 import { Footer } from './Footer.tsx'
 import { FloatingCommunicationsWidget } from '@/features/chat/FloatingCommunicationsWidget.tsx'
 
+const WORKSPACE_PREFIXES = ['/dashboard', '/admin', '/psychologist']
+
 export const Layout: React.FC = () => {
   const { pathname } = useLocation()
+  const isWorkspace = WORKSPACE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
 
   // Scroll smoothly to top on route navigation
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }, [pathname])
+
+  if (isWorkspace) {
+    return (
+      <div className="min-h-screen bg-[#F7F4EF] text-[#23192D]">
+        <Outlet />
+        <FloatingCommunicationsWidget />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#23192D]">

@@ -20,12 +20,24 @@ Portal Administrator (Admin Dashboard) Soulaide dirancang untuk memfasilitasi ma
 
 ---
 
-## 2. Struktur Modul & Sub-Komponen
+## 2. Workspace Shell & Navigation
+
+Portal admin memakai `DashboardShell` bersama (`src/components/dashboard/`) sehingga tidak lagi
+memakai header publik dan tab horizontal yang padat.
+
+- Sidebar dikelompokkan menjadi **Ikhtisar**, **Operasional**, **Pengelolaan**, dan
+  **Tata Kelola**, dengan badge antrean pada reservasi dan pembayaran.
+- Top bar menampilkan konteks halaman, tanggal, tautan situs publik, dan identitas pengguna.
+- Mobile memakai drawer aksesibel (backdrop, Escape, scroll lock).
+- Ringkasan memakai hero `DashboardPageHeader`, empat `StatCard`, panel tindakan, jadwal
+  terdekat, grafik beban 7 hari, distribusi status, kesiapan ekosistem, dan jejak audit.
+
+## 3. Struktur Modul & Sub-Komponen
 
 Modul administrator diimplementasikan pada `src/features/admin/`:
 
 1. **`AdminDashboardPage.tsx`:**
-   - Kontroler pusat dengan tab navigasi lengkap:
+   - Kontroler pusat dengan navigasi sidebar lengkap:
      - `overview`: Ringkasan KPI dan aktivitas terkini
      - `bookings`: Operasional jadwal & penugasan psikolog
      - `payments`: Rekonsiliasi transaksi Midtrans & refund
@@ -37,9 +49,10 @@ Modul administrator diimplementasikan pada `src/features/admin/`:
      - `settings`: Pengaturan Konfigurasi Situs
 
 2. **`AdminOverviewTab.tsx`:**
-   - Menampilkan metrik KPI real-time (Total Booking, Sesi Terkonfirmasi, Menunggu Bayar, Pendapatan Bersih, Psikolog Terdaftar, Layanan Aktif).
-   - Peringatan antrean pemesanan yang memerlukan tindakan admin.
-   - Stream log aktivitas audit terkini.
+   - Menampilkan metrik KPI real-time (Total Reservasi, Sesi Terkonfirmasi, Menunggu Pembayaran, Pendapatan Bersih).
+   - Antrean tindakan: pembayaran tertunda, pengajuan reschedule, dan transaksi gagal/kedaluwarsa.
+   - Daftar sesi terdekat, grafik beban 7 hari, distribusi status reservasi, kesiapan ekosistem,
+     serta jejak audit terbaru.
 
 3. **`AdminBookingsTab.tsx`:**
    - Tabel pemesanan lengkap dengan filter status dan metode (Online/Tatap Muka).
@@ -62,7 +75,7 @@ Modul administrator diimplementasikan pada `src/features/admin/`:
 
 ---
 
-## 3. Hasil Pengujian Unit
+## 4. Hasil Pengujian Unit
 
 Seluruh pengujian unit pada `src/features/admin/admin.test.ts` berhasil:
 - Kalkulasi akurat KPI operasional dan pendapatan bersih dari transaksi lunas.

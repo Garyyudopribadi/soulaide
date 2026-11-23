@@ -134,6 +134,17 @@
   }
 }
 
+@keyframes dashboardRise {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .animate-phrase-enter {
   animation: phraseFadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -165,6 +176,16 @@
 
 .animate-float-gentle-delayed {
   animation: floatGentle 6.5s ease-in-out 1.8s infinite;
+}
+
+.dashboard-enter {
+  animation: dashboardRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-enter {
+    animation: none;
+  }
 }
 
 /* Soulaide Looping Header Mesh Background */

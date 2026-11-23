@@ -1,5 +1,5 @@
 export type PresenceStatus = 'offline' | 'online' | 'available' | 'busy' | 'away';
-export type PsychologistTab = 'sessions' | 'calendar' | 'clinical' | 'profile';
+export type PsychologistTab = 'overview' | 'sessions' | 'calendar' | 'clinical' | 'profile';
 
 export interface PsychologistProfileData {
   id: string;

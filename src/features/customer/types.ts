@@ -1,6 +1,6 @@
 import type { PaymentStatus } from '@/features/payments/types';
 
-export type CustomerTab = 'sessions' | 'payments' | 'profile' | 'notifications';
+export type CustomerTab = 'overview' | 'sessions' | 'payments' | 'profile' | 'notifications';
 export type SessionFilter = 'upcoming' | 'history' | 'all';
 
 export interface ClientProfileData {
