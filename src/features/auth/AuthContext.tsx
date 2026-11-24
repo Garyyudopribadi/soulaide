@@ -57,10 +57,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const refreshProfile = useCallback(async () => {
-    if (user?.id) {
-      await fetchProfileAndRole(user.id)
+    // Read the live session, not the `user` closure: right after signIn the
+    // state still holds the previous account, which would overwrite the new
+    // session's profile/role and bounce role-protected routes to /unauthorized.
+    const { data: { session: current } } = await supabase.auth.getSession()
+    if (current?.user?.id) {
+      await fetchProfileAndRole(current.user.id)
     }
-  }, [user, fetchProfileAndRole])
+  }, [fetchProfileAndRole])
 
   const signOut = useCallback(async () => {
     setLoading(true)
