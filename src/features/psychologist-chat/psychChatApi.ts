@@ -39,17 +39,23 @@ export async function fetchClientThreads(
   psychologistId: string,
   viewerId: string
 ): Promise<ClientThreadSummary[]> {
+  // customer_id references auth.users, so PostgREST cannot embed
+  // Soulaide_profiles directly; fetch the (RLS-scoped) profiles separately.
   const { data: convs, error } = await supabase
     .from('Soulaide_conversations')
-    .select(`
-      id, customer_id, updated_at,
-      customer:Soulaide_profiles(id, full_name)
-    `)
+    .select('id, customer_id, updated_at')
     .eq('psychologist_id', psychologistId)
     .eq('kind', 'psychologist')
     .order('updated_at', { ascending: false })
 
   if (error || !convs || convs.length === 0) return []
+
+  const customerIds = [...new Set(convs.map((c) => c.customer_id as string))]
+  const { data: profiles } = await supabase
+    .from('Soulaide_profiles')
+    .select('id, full_name')
+    .in('id', customerIds)
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]))
 
   const ids = convs.map((c) => c.id)
   const { data: messages } = await supabase
@@ -69,11 +75,10 @@ export async function fetchClientThreads(
   }
 
   return convs.map((c) => {
-    const customer = (c as unknown as { customer: { id: string; full_name: string } | null }).customer
     return {
       id: c.id,
       customerId: c.customer_id as string,
-      customerName: customer?.full_name || 'Klien Soulaide',
+      customerName: nameById.get(c.customer_id as string) || 'Klien Soulaide',
       updatedAt: c.updated_at,
       lastMessage: lastByConv.get(c.id) ?? null,
       unreadCount: unreadByConv.get(c.id) ?? 0,
