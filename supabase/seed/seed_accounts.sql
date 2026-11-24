@@ -15,6 +15,8 @@ DECLARE
   v_finandita_id UUID := 'a0000000-0000-0000-0000-000000000002';
   v_amanda_id UUID := 'a0000000-0000-0000-0000-000000000003';
   v_klien_id UUID := 'a0000000-0000-0000-0000-000000000004';
+  v_filza_id UUID := 'a0000000-0000-0000-0000-000000000005';
+  v_narissa_id UUID := 'a0000000-0000-0000-0000-000000000006';
 
   v_admin_pwd TEXT := extensions.crypt('AdminSoulaide2026!', extensions.gen_salt('bf'));
   v_psych_pwd TEXT := extensions.crypt('Psikolog2026!', extensions.gen_salt('bf'));
@@ -22,7 +24,7 @@ DECLARE
 BEGIN
 
   -- 1. HAPUS IDENTITAS LAMA DARI AKUN DEMO INI SUPAYA TIDAK DUPLIKAT/BENTROK
-  DELETE FROM auth.identities WHERE user_id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id);
+  DELETE FROM auth.identities WHERE user_id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id, v_filza_id, v_narissa_id);
 
   -- 2. INSERT / UPSERT KE AUTH.USERS LENGKAP DENGAN DEFAULT EMPTY STRING
   -- (Mencegah "converting NULL to string is unsupported" di GoTrue)
@@ -106,6 +108,34 @@ BEGIN
       NOW(),
       NOW(),
       '', '', '', '', '', '', '', '', 0, FALSE, FALSE, FALSE
+    ),
+    (
+      v_filza_id,
+      '00000000-0000-0000-0000-000000000000',
+      'authenticated',
+      'authenticated',
+      'filza@soulaide.id',
+      v_psych_pwd,
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}'::jsonb,
+      '{"full_name": "Filza Ayska Syabina, S.Psi., Psikolog."}'::jsonb,
+      NOW(),
+      NOW(),
+      '', '', '', '', '', '', '', '', 0, FALSE, FALSE, FALSE
+    ),
+    (
+      v_narissa_id,
+      '00000000-0000-0000-0000-000000000000',
+      'authenticated',
+      'authenticated',
+      'narissa@soulaide.id',
+      v_psych_pwd,
+      NOW(),
+      '{"provider": "email", "providers": ["email"]}'::jsonb,
+      '{"full_name": "Narissa Qurrata Ayunin, S.Psi., Psikolog."}'::jsonb,
+      NOW(),
+      NOW(),
+      '', '', '', '', '', '', '', '', 0, FALSE, FALSE, FALSE
     )
   ON CONFLICT (id) DO UPDATE SET
     encrypted_password = EXCLUDED.encrypted_password,
@@ -168,7 +198,7 @@ BEGIN
     NOW(),
     NOW()
   FROM auth.users u
-  WHERE u.id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id);
+  WHERE u.id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id, v_filza_id, v_narissa_id);
 
   -- 5. UPSERT KE PUBLIC."Soulaide_profiles"
   INSERT INTO public."Soulaide_profiles" (id, email, full_name, phone_number, created_at, updated_at)
@@ -176,7 +206,9 @@ BEGIN
     (v_admin_id, 'admin@soulaide.id', 'Administrator Soulaide', '+6281234567890', NOW(), NOW()),
     (v_finandita_id, 'finandita@soulaide.id', 'Finandita Utari, M.Psi., Psikolog.', '+6281234567891', NOW(), NOW()),
     (v_amanda_id, 'amanda@soulaide.id', 'Amanda Natasanti, S.Psi., Psikolog.', '+6281234567892', NOW(), NOW()),
-    (v_klien_id, 'klien@soulaide.id', 'Budi Pratama', '+6289876543210', NOW(), NOW())
+    (v_klien_id, 'klien@soulaide.id', 'Budi Pratama', '+6289876543210', NOW(), NOW()),
+    (v_filza_id, 'filza@soulaide.id', 'Filza Ayska Syabina, S.Psi., Psikolog.', '+6281234567893', NOW(), NOW()),
+    (v_narissa_id, 'narissa@soulaide.id', 'Narissa Qurrata Ayunin, S.Psi., Psikolog.', '+6281234567894', NOW(), NOW())
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     full_name = EXCLUDED.full_name,
@@ -185,14 +217,16 @@ BEGIN
 
   -- 6. BERIKAN ROLE SPESIFIK DI PUBLIC."Soulaide_user_roles"
   DELETE FROM public."Soulaide_user_roles"
-  WHERE user_id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id);
+  WHERE user_id IN (v_admin_id, v_finandita_id, v_amanda_id, v_klien_id, v_filza_id, v_narissa_id);
 
   INSERT INTO public."Soulaide_user_roles" (user_id, role, created_at)
   VALUES
     (v_admin_id, 'super_admin', NOW()),
     (v_finandita_id, 'psychologist', NOW()),
     (v_amanda_id, 'psychologist', NOW()),
-    (v_klien_id, 'customer', NOW());
+    (v_klien_id, 'customer', NOW()),
+    (v_filza_id, 'psychologist', NOW()),
+    (v_narissa_id, 'psychologist', NOW());
 
   -- 7. HUBUNGKAN USER_ID KE DATA PSIKOLOG DI PUBLIC."Soulaide_psychologists"
   UPDATE public."Soulaide_psychologists"
@@ -202,6 +236,14 @@ BEGIN
   UPDATE public."Soulaide_psychologists"
   SET user_id = v_amanda_id
   WHERE slug = 'amanda-natasanti';
+
+  UPDATE public."Soulaide_psychologists"
+  SET user_id = v_filza_id
+  WHERE slug = 'filza-ayska-syabina';
+
+  UPDATE public."Soulaide_psychologists"
+  SET user_id = v_narissa_id
+  WHERE slug = 'narissa-qurrata-ayunin';
 
 END $$;
 
@@ -217,5 +259,5 @@ FROM auth.users u
 JOIN public."Soulaide_profiles" p ON u.id = p.id
 JOIN public."Soulaide_user_roles" r ON u.id = r.user_id
 LEFT JOIN auth.identities i ON u.id = i.user_id
-WHERE u.email IN ('admin@soulaide.id', 'finandita@soulaide.id', 'amanda@soulaide.id', 'klien@soulaide.id')
+WHERE u.email IN ('admin@soulaide.id', 'finandita@soulaide.id', 'amanda@soulaide.id', 'klien@soulaide.id', 'filza@soulaide.id', 'narissa@soulaide.id')
 ORDER BY u.email;

@@ -36,6 +36,23 @@ export const BotAvatar: React.FC<{ className?: string }> = ({ className }) => (
   />
 )
 
+export const InitialsAvatar: React.FC<{ name: string; className?: string }> = ({ name, className }) => (
+  <span
+    className={cn(
+      'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-plum-100 bg-plum-50 text-[10px] font-extrabold text-plum-700',
+      className
+    )}
+    aria-hidden="true"
+  >
+    {name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase())
+      .join('')}
+  </span>
+)
+
 export const TypingDots: React.FC = () => (
   <span className="inline-flex items-center gap-1 px-1 py-1.5" aria-label="Asisten sedang mengetik">
     {[0, 1, 2].map((i) => (
@@ -55,7 +72,9 @@ export const MessageBubble: React.FC<{
   isOwn: boolean
   createdAt: string
   avatarUrl?: string | null
-}> = ({ content, senderKind, isOwn, createdAt, avatarUrl }) => {
+  /** Rendered instead of the bot avatar for non-bot senders without a photo. */
+  fallbackAvatar?: React.ReactNode
+}> = ({ content, senderKind, isOwn, createdAt, avatarUrl, fallbackAvatar }) => {
   if (senderKind === 'system') {
     return (
       <div className="flex justify-center py-1">
@@ -70,10 +89,12 @@ export const MessageBubble: React.FC<{
   return (
     <div className={cn('flex items-end gap-2', isOwn ? 'justify-end' : 'justify-start')}>
       {!isOwn && (
-        isBot || !avatarUrl ? (
+        avatarUrl ? (
+          <img src={avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-xl border border-[#E8E1D9] object-cover" />
+        ) : isBot ? (
           <BotAvatar />
         ) : (
-          <img src={avatarUrl} alt="" className="h-8 w-8 shrink-0 rounded-xl border border-[#E8E1D9] object-cover" />
+          fallbackAvatar ?? <BotAvatar />
         )
       )}
       <div

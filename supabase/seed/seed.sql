@@ -15,7 +15,7 @@ INSERT INTO public."Soulaide_services" (
   id, category_id, name, slug, description, duration_minutes, delivery_methods, price_online, price_offline, is_active
 ) VALUES
   (
-    's1000000-0000-0000-0000-000000000001',
+    '51000000-0000-0000-0000-000000000001',
     'c1000000-0000-0000-0000-000000000001',
     'Individual Counseling 60 Menit (Online)',
     'individual-counseling-60m-online',
@@ -27,7 +27,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's2000000-0000-0000-0000-000000000002',
+    '52000000-0000-0000-0000-000000000002',
     'c1000000-0000-0000-0000-000000000001',
     'MHCU Assessment (Online)',
     'mhcu-assessment-online',
@@ -39,7 +39,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's3000000-0000-0000-0000-000000000003',
+    '53000000-0000-0000-0000-000000000003',
     'c1000000-0000-0000-0000-000000000001',
     'Bundle MHCU + Sesi Hasil 30m + Konseling 60m (Online)',
     'bundle-mhcu-counseling-online',
@@ -51,7 +51,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's4000000-0000-0000-0000-000000000004',
+    '54000000-0000-0000-0000-000000000004',
     'c1000000-0000-0000-0000-000000000001',
     'Individual Counseling 60 Menit (Offline)',
     'individual-counseling-60m-offline',
@@ -69,7 +69,7 @@ INSERT INTO public."Soulaide_psychologists" (
   id, slug, full_name, credentials, bio, experience_years, initial_schedule, practice_areas, approaches, card_image_url, profile_image_url, is_active
 ) VALUES
   (
-    'p1000000-0000-0000-0000-000000000001',
+    'd1000000-0000-0000-0000-000000000001',
     'finandita-utari',
     'Finandita Utari',
     'M.Psi., Psikolog., CTC., CGA.',
@@ -83,7 +83,7 @@ INSERT INTO public."Soulaide_psychologists" (
     TRUE
   ),
   (
-    'p2000000-0000-0000-0000-000000000002',
+    'd2000000-0000-0000-0000-000000000002',
     'amanda-natasanti',
     'Amanda Natasanti',
     'S.Psi., Psikolog.',
@@ -97,7 +97,7 @@ INSERT INTO public."Soulaide_psychologists" (
     TRUE
   ),
   (
-    'p3000000-0000-0000-0000-000000000003',
+    'd3000000-0000-0000-0000-000000000003',
     'filza-ayska-syabina',
     'Filza Ayska Syabina',
     'S.Psi., Psikolog.',
@@ -111,7 +111,7 @@ INSERT INTO public."Soulaide_psychologists" (
     TRUE
   ),
   (
-    'p4000000-0000-0000-0000-000000000004',
+    'd4000000-0000-0000-0000-000000000004',
     'narissa-qurrata-ayunin',
     'Narissa Qurrata Ayunin',
     'S.Psi., Psikolog.',

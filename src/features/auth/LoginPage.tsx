@@ -32,11 +32,32 @@ export const LoginPage: React.FC = () => {
       } else if (data.user) {
         await refreshProfile()
 
+        // Land each role in its own workspace; /dashboard is client-only.
+        const { data: roleRows } = await supabase
+          .from('Soulaide_user_roles')
+          .select('role')
+          .eq('user_id', data.user.id)
+        const roles = (roleRows ?? []).map((r) => r.role)
+        const home = roles.includes('super_admin') || roles.includes('admin')
+          ? '/admin'
+          : roles.includes('psychologist')
+            ? '/psychologist'
+            : '/dashboard'
+
         const from = (location.state as { from?: { pathname: string } })?.from?.pathname
-        if (from && from !== '/login') {
+        const allowedPrefixes = roles.includes('super_admin')
+          ? null
+          : home === '/admin'
+            ? ['/admin']
+            : home === '/psychologist'
+              ? ['/psychologist']
+              : ['/dashboard', '/booking']
+        const fromAllowed =
+          allowedPrefixes === null || allowedPrefixes.some((p) => (from ?? '').startsWith(p))
+        if (from && from !== '/login' && fromAllowed) {
           navigate(from, { replace: true })
         } else {
-          navigate('/dashboard', { replace: true })
+          navigate(home, { replace: true })
         }
       }
     } catch (err: unknown) {
@@ -61,10 +82,10 @@ export const LoginPage: React.FC = () => {
           </Link>
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E1429] tracking-tight">
-              Masuk ke <span className="font-serif italic font-semibold text-plum-700">Portal Klien</span>
+              Masuk ke <span className="font-serif italic font-semibold text-plum-700">Akun Soulaide</span>
             </h1>
             <p className="text-xs sm:text-sm text-[#645A70] max-w-xs mx-auto leading-relaxed">
-              Akses jadwal konseling aktif, riwayat sesi, dan laporan evaluasi klinis Anda.
+              Lanjutkan ke ruang klien atau ruang praktik psikolog Anda.
             </p>
           </div>
         </div>
