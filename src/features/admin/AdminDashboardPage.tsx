@@ -204,10 +204,7 @@ export const AdminDashboardPage: React.FC = () => {
           />
           <AdminPaymentsTab
             payments={payments}
-            onRefresh={() => {
-              refetchPayments()
-              refetchKpis()
-            }}
+            onRefresh={() => Promise.all([refetchPayments(), refetchKpis()])}
           />
         </div>
       )}

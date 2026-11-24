@@ -25,7 +25,7 @@ import { formatIDR } from '@/lib/utils';
 
 interface AdminPaymentsTabProps {
   payments: AdminPaymentItem[];
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
 }
 
 const STATUS_FILTERS = [
@@ -111,7 +111,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       await adminService.processRefund(refundPayment.id, refundAmount, refundReason);
       showNotice(`Refund sebesar ${formatIDR(refundAmount)} untuk ${refundPayment.provider_order_id} berhasil diproses.`);
       setRefundPayment(null);
-      onRefresh();
+      await onRefresh();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Gagal memproses refund');
     } finally {
@@ -135,7 +135,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       } else {
         showNotice(`${payment.provider_order_id}: QRISGate tidak dapat dicek saat ini.`);
       }
-      onRefresh();
+      await onRefresh();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Gagal menyinkronkan QRISGate');
     } finally {
@@ -163,7 +163,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
           failed += 1;
         }
       }
-      onRefresh();
+      await onRefresh();
       showNotice(
         `Sinkron QRISGate selesai. ${syncTargets.length - failed} dicek, ${becamePaid} menjadi lunas, ${mismatches} nominal tidak cocok, ${failed} gagal dihubungi.`
       );
@@ -194,7 +194,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       }
       setSettlePayment(null);
       setSettleReason('');
-      onRefresh();
+      await onRefresh();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Gagal menandai lunas');
     } finally {
