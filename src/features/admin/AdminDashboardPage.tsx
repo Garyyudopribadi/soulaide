@@ -204,7 +204,9 @@ export const AdminDashboardPage: React.FC = () => {
           />
           <AdminPaymentsTab
             payments={payments}
-            onRefresh={() => Promise.all([refetchPayments(), refetchKpis()])}
+            onRefresh={async () => {
+              await Promise.all([refetchPayments(), refetchKpis()])
+            }}
           />
         </div>
       )}
