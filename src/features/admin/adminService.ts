@@ -307,6 +307,105 @@ export const adminService = {
   },
 
   /**
+   * Add a new staff member by email, full name, and role
+   */
+  async addStaffMember(params: {
+    email: string;
+    fullName: string;
+    role: UserRole;
+  }): Promise<void> {
+    // 1. Check if user already exists in auth or profiles
+    const { data: existingProfiles } = await supabase
+      .from('Soulaide_profiles')
+      .select('id, email')
+      .ilike('email', params.email.trim())
+      .limit(1);
+
+    let targetUserId: string;
+
+    if (existingProfiles && existingProfiles.length > 0) {
+      targetUserId = existingProfiles[0].id;
+      // Update full_name if provided
+      await supabase
+        .from('Soulaide_profiles')
+        .update({ full_name: params.fullName, updated_at: new Date().toISOString() })
+        .eq('id', targetUserId);
+    } else {
+      // Generate a new UUID for the profile record
+      targetUserId = crypto.randomUUID();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: profileError } = await (supabase.from('Soulaide_profiles') as any).insert({
+        id: targetUserId,
+        email: params.email.trim(),
+        full_name: params.fullName,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (profileError) {
+        throw new Error(`Gagal membuat profil staf: ${profileError.message}`);
+      }
+    }
+
+    // 2. Insert or update user role in Soulaide_user_roles
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: roleError } = await (supabase.from('Soulaide_user_roles') as any).upsert(
+      {
+        user_id: targetUserId,
+        role: params.role,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id, role' }
+    );
+
+    if (roleError) {
+      throw new Error(`Gagal menetapkan role staf: ${roleError.message}`);
+    }
+
+    await adminService.recordAuditLog('STAFF_MEMBER_ADDED', 'staff', targetUserId, {
+      email: params.email,
+      role: params.role,
+      name: params.fullName,
+    });
+  },
+
+  /**
+   * Update full staff profile & role authority
+   */
+  async updateStaffMember(params: {
+    userId: string;
+    fullName?: string;
+    email?: string;
+    newRole?: UserRole;
+  }): Promise<void> {
+    if (params.fullName || params.email) {
+      const payload: { updated_at: string; full_name?: string; email?: string } = {
+        updated_at: new Date().toISOString(),
+      };
+      if (params.fullName) payload.full_name = params.fullName;
+      if (params.email) payload.email = params.email;
+
+      await supabase.from('Soulaide_profiles').update(payload).eq('id', params.userId);
+    }
+
+    if (params.newRole) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: roleError } = await (supabase.from('Soulaide_user_roles') as any)
+        .update({ role: params.newRole, updated_at: new Date().toISOString() })
+        .eq('user_id', params.userId);
+
+      if (roleError) {
+        throw new Error(`Gagal mengubah otoritas role: ${roleError.message}`);
+      }
+    }
+
+    await adminService.recordAuditLog('STAFF_MEMBER_UPDATED', 'staff', params.userId, {
+      new_role: params.newRole,
+      full_name: params.fullName,
+    });
+  },
+
+  /**
    * Update user role in Soulaide_user_roles
    */
   async updateUserRole(userId: string, newRole: UserRole): Promise<void> {

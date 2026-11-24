@@ -11,7 +11,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchProfileAndRole = useCallback(async (userId: string) => {
+  const fetchProfileAndRole = useCallback(async (userId: string): Promise<UserRole> => {
     try {
       // 1. Fetch profile from Soulaide_profiles
       const { data: profileData } = await supabase
@@ -36,30 +36,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('role')
         .eq('user_id', userId)
 
+      let resolvedRole: UserRole = 'customer'
       if (roleData && roleData.length > 0) {
         const roles = roleData.map((r) => r.role as UserRole)
         if (roles.includes('super_admin')) {
-          setRole('super_admin')
+          resolvedRole = 'super_admin'
         } else if (roles.includes('admin')) {
-          setRole('admin')
+          resolvedRole = 'admin'
         } else if (roles.includes('psychologist')) {
-          setRole('psychologist')
-        } else {
-          setRole('customer')
+          resolvedRole = 'psychologist'
         }
-      } else {
-        setRole('customer')
       }
+      setRole(resolvedRole)
+      return resolvedRole
     } catch (err) {
       console.error('[Soulaide Auth] Error loading profile/role:', err)
       setRole('customer')
+      return 'customer'
     }
   }, [])
 
-  const refreshProfile = useCallback(async () => {
-    if (user?.id) {
-      await fetchProfileAndRole(user.id)
+  const refreshProfile = useCallback(async (explicitUserId?: string): Promise<UserRole> => {
+    const targetId = explicitUserId || user?.id
+    if (targetId) {
+      return await fetchProfileAndRole(targetId)
     }
+    return 'customer'
   }, [user, fetchProfileAndRole])
 
   const signOut = useCallback(async () => {

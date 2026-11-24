@@ -37,10 +37,10 @@ export const AdminAuditLogsTab: React.FC<AdminAuditLogsTabProps> = ({ logs }) =>
         <div>
           <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
             <Activity className="w-5 h-5 text-plum-600" />
-            <span>Jejak Audit Sistem (System Audit Trail)</span>
+            <span>Riwayat & Catatan Audit Sistem</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Merekam seluruh aksi transaksi, pembaruan status pemesanan, dan eskalasi role secara permanen.
+            Merekam seluruh aksi transaksi, pembaruan status booking, dan perubahan otoritas staf.
           </p>
         </div>
 

@@ -7,15 +7,38 @@ import { FloatingCommunicationsWidget } from '@/features/chat/FloatingCommunicat
 const WORKSPACE_PREFIXES = ['/dashboard', '/admin', '/psychologist']
 
 export const Layout: React.FC = () => {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const isWorkspace = WORKSPACE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
 
-  // Scroll smoothly to top on route navigation
+  // Scroll to top on route changes, or smooth scroll & focus to hash anchors
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [pathname])
+    if (hash) {
+      const id = hash.replace('#', '')
+      const scrollToElement = () => {
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' })
+          // Set focus for accessibility and keyboard navigation
+          if (!el.hasAttribute('tabindex')) {
+            el.setAttribute('tabindex', '-1')
+          }
+          el.focus({ preventScroll: true })
+          return true
+        }
+        return false
+      }
+
+      // Try immediately, or retry on next animation frame if DOM is rendering
+      if (!scrollToElement()) {
+        const timer = setTimeout(scrollToElement, 100)
+        return () => clearTimeout(timer)
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+  }, [pathname, hash])
 
   if (isWorkspace) {
     return (

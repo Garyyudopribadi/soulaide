@@ -140,7 +140,7 @@ export const PsychologistOverviewTab: React.FC<PsychologistOverviewTabProps> = (
         }
         actions={
           <>
-            <div className="rounded-xl border border-[#E2DAD1] bg-white px-2.5 py-1.5 shadow-2xs">
+            <div className="relative z-50 rounded-xl border border-[#E2DAD1] bg-white px-2.5 py-1.5 shadow-2xs">
               <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8E81A1]">
                 Status kehadiran
               </p>
@@ -162,7 +162,7 @@ export const PsychologistOverviewTab: React.FC<PsychologistOverviewTabProps> = (
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <div className="relative z-0 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Sesi hari ini"
           value={todayBookings.length}
@@ -436,8 +436,8 @@ export const PsychologistOverviewTab: React.FC<PsychologistOverviewTabProps> = (
 
         <div className="space-y-5">
           <DashboardSection
-            title="Beban 7 hari"
-            description="Sesi per hari dalam sepekan ke depan."
+            title="Sesi booking 7 hari ke depan"
+            description="Jadwal sesi konsultasi per hari dalam sepekan ke depan."
             icon={CalendarDays}
           >
             <WeeklyLoadChart
@@ -504,18 +504,18 @@ export const PsychologistOverviewTab: React.FC<PsychologistOverviewTabProps> = (
           </DashboardSection>
 
           <DashboardSection
-            title="Catatan privasi"
-            description="Prinsip least privilege pada data klinis."
+            title="Keamanan & Privasi"
+            description="Standar kerahasiaan dan privasi data rekam medis klien."
             icon={ShieldCheck}
           >
             <div className="rounded-xl border border-plum-100 bg-plum-50/70 p-3.5">
               <p className="text-[10px] leading-relaxed text-plum-900">
-                Catatan klinis hanya dapat diakses oleh Anda sebagai psikolog penanggung jawab dan
-                super admin berlisensi klinis. Staf administrasi umum tidak memiliki akses.
+                Catatan klinis bersifat rahasia dan hanya dapat diakses oleh Anda sebagai psikolog penanggung jawab serta
+                super admin. Staf administrasi umum tidak memiliki akses ke rekam medis ini.
               </p>
               <p className="mt-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
                 <ShieldCheck className="h-3 w-3" />
-                RLS aktif · audit trail tercatat
+                Data Terenkripsi & Akses Terlindungi
               </p>
             </div>
           </DashboardSection>

@@ -1,4 +1,5 @@
 import type { PsychologistProfile } from '@/types/index.ts'
+import { getAssetUrl } from '@/lib/utils.ts'
 
 export const initialPsychologists: PsychologistProfile[] = [
   {
@@ -9,8 +10,8 @@ export const initialPsychologists: PsychologistProfile[] = [
     initialSchedule: 'Senin – Sabtu, by appointment',
     practiceAreas: ['Pendidikan', 'Inklusi', 'Parenting', 'Pernikahan/Pasangan/Keluarga'],
     approaches: ['ABA', 'CBT'],
-    cardImage: '/Psikolog/Card - Finandita Utari, M.Psi., Psikolog., CTC., CGA.jpg',
-    profileImage: '/Psikolog/Profile - Finandita Utari, M.Psi., Psikolog., CTC., CGA.jpg',
+    cardImage: getAssetUrl('/Psikolog/Card - Finandita Utari, M.Psi., Psikolog., CTC., CGA.webp'),
+    profileImage: getAssetUrl('/Psikolog/Profile - Finandita Utari, M.Psi., Psikolog., CTC., CGA.webp'),
     tier: 'Soul Expert',
   },
   {
@@ -21,8 +22,8 @@ export const initialPsychologists: PsychologistProfile[] = [
     initialSchedule: 'Selasa/Rabu 19.30–21.30; Sabtu/Minggu by appointment',
     practiceAreas: ['Stres', 'Kecemasan', 'Overthinking', 'Quarter-Life', 'Karier', 'Relasi', 'Burnout'],
     approaches: ['CBT', 'Humanistic', 'SFBT'],
-    cardImage: '/Psikolog/Card - Amanda Natasanti S. Psi., Psikolog.jpg',
-    profileImage: '/Psikolog/Profile - Amanda Natasanti S. Psi., Psikolog.jpg',
+    cardImage: getAssetUrl('/Psikolog/Card - Amanda Natasanti S. Psi., Psikolog.webp'),
+    profileImage: getAssetUrl('/Psikolog/Profile - Amanda Natasanti S. Psi., Psikolog.webp'),
     tier: 'Soul Guidance',
   },
   {
@@ -33,8 +34,8 @@ export const initialPsychologists: PsychologistProfile[] = [
     initialSchedule: 'Selasa – Jumat, by appointment',
     practiceAreas: ['Burnout', 'Lingkungan Kerja', 'Pengembangan Diri', 'Quarter-Life', 'Stres', 'Kecemasan', 'Konflik Interpersonal'],
     approaches: ['CBT', 'Humanistic', 'SFBT'],
-    cardImage: '/Psikolog/Card - Filza Ayska S. S. Psi., Psikolog.jpg',
-    profileImage: '/Psikolog/Profile - Filza Ayska S. S. Psi., Psikolog.jpg',
+    cardImage: getAssetUrl('/Psikolog/Card - Filza Ayska S. S. Psi., Psikolog.webp'),
+    profileImage: getAssetUrl('/Psikolog/Profile - Filza Ayska S. S. Psi., Psikolog.webp'),
     tier: 'Soul Guidance',
   },
   {
@@ -45,8 +46,8 @@ export const initialPsychologists: PsychologistProfile[] = [
     initialSchedule: 'Kamis/Jumat 18.30–21.30; Sabtu/Minggu by appointment',
     practiceAreas: ['Adaptasi', 'Neurodiversity', 'Kecemasan', 'Regulasi Emosi', 'Overthinking', 'Caregiver Burnout', 'Relasi', 'Self-Acceptance'],
     approaches: ['CBT', 'Humanistic', 'SFBT'],
-    cardImage: '/Psikolog/Card - Narissa Q. Ayunin S. Psi., Psikolog.jpg',
-    profileImage: '/Psikolog/Profile - Narissa Q. Ayunin S. Psi., Psikolog.jpg',
+    cardImage: getAssetUrl('/Psikolog/Card - Narissa Q. Ayunin S. Psi., Psikolog.webp'),
+    profileImage: getAssetUrl('/Psikolog/Profile - Narissa Q. Ayunin S. Psi., Psikolog.webp'),
     tier: 'Soul Guidance',
   },
 ]

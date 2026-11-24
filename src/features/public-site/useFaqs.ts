@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client.ts'
 
 export interface FaqItem {
@@ -48,7 +48,9 @@ export const fallbackFaqs: FaqItem[] = [
 ]
 
 export function useFaqs() {
-  return useQuery<FaqItem[]>({
+  const queryClient = useQueryClient()
+
+  const query = useQuery<FaqItem[]>({
     queryKey: ['soulaide-faqs'],
     queryFn: async () => {
       try {
@@ -75,4 +77,46 @@ export function useFaqs() {
     },
     initialData: fallbackFaqs,
   })
+
+  const addFaqMutation = useMutation({
+    mutationFn: async (newFaq: Omit<FaqItem, 'id'>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_faqs') as any).insert({
+        question: newFaq.question,
+        answer: newFaq.answer,
+        category: newFaq.category,
+        display_order: newFaq.display_order,
+        is_active: true,
+      })
+
+      if (error) {
+        throw new Error(`Gagal menambahkan FAQ: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-faqs'] })
+    },
+  })
+
+  const deleteFaqMutation = useMutation({
+    mutationFn: async (faqId: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_faqs') as any)
+        .update({ is_active: false })
+        .eq('id', faqId)
+
+      if (error) {
+        throw new Error(`Gagal menghapus FAQ: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-faqs'] })
+    },
+  })
+
+  return {
+    ...query,
+    addFaq: addFaqMutation.mutateAsync,
+    deleteFaq: deleteFaqMutation.mutateAsync,
+  }
 }

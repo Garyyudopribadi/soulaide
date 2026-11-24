@@ -1,21 +1,43 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { useSiteSettings } from '@/features/public-site/useSiteSettings.ts'
-import { Check, Settings } from 'lucide-react'
+import { Check, Settings, Loader2 } from 'lucide-react'
 
 export const AdminCmsSettings: React.FC = () => {
-  const { data: initialSettings } = useSiteSettings()
+  const { data: initialSettings, updateSettings, isUpdating } = useSiteSettings()
   const [whatsappNumber, setWhatsappNumber] = useState(initialSettings.whatsappNumber)
   const [defaultMessage, setDefaultMessage] = useState(initialSettings.defaultMessage)
   const [leadTime, setLeadTime] = useState(initialSettings.minimumLeadTimeHours)
   const [offlineAddress, setOfflineAddress] = useState(initialSettings.offlineAddress)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialSettings) {
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setWhatsappNumber(initialSettings.whatsappNumber)
+      setDefaultMessage(initialSettings.defaultMessage)
+      setLeadTime(initialSettings.minimumLeadTimeHours)
+      setOfflineAddress(initialSettings.offlineAddress)
+      /* eslint-enable react-hooks/set-state-in-effect */
+    }
+  }, [initialSettings])
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setNotice('Pengaturan sistem dan kontak situs berhasil disimpan.')
-    setTimeout(() => setNotice(null), 3000)
+    try {
+      await updateSettings({
+        whatsappNumber,
+        defaultMessage,
+        minimumLeadTimeHours: leadTime,
+        offlineAddress,
+      })
+      setNotice('Pengaturan sistem dan kontak situs berhasil disimpan ke database.')
+      setTimeout(() => setNotice(null), 3000)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Gagal menyimpan pengaturan.')
+      setTimeout(() => setNotice(null), 3000)
+    }
   }
 
   return (
@@ -93,7 +115,16 @@ export const AdminCmsSettings: React.FC = () => {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit">Simpan Konfigurasi</Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                'Simpan Konfigurasi'
+              )}
+            </Button>
           </CardFooter>
         </form>
       </Card>

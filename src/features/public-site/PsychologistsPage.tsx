@@ -10,10 +10,12 @@ import {
   X,
   FileBadge2,
   Calendar,
+  ArrowLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { usePsychologists } from '@/features/psychologists/usePsychologists.ts'
+import { handleImageFallback } from '@/lib/utils.ts'
 import type { ProfessionalTier, PsychologistProfile } from '@/types/index.ts'
 
 export const PsychologistsPage: React.FC = () => {
@@ -85,6 +87,15 @@ export const PsychologistsPage: React.FC = () => {
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-5">
+          <div className="flex justify-center mb-1">
+            <Link
+              to="/#psikolog"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-plum-800 hover:text-plum-950 transition-colors bg-white/80 border border-line px-3 py-1 rounded-full shadow-2xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Kembali ke Beranda</span>
+            </Link>
+          </div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/90 border border-plum-200/80 text-plum-800 text-xs font-semibold shadow-2xs backdrop-blur-sm">
             <Award className="w-3.5 h-3.5 text-plum-600" />
             <span>Psikolog Klinis &amp; Konselor Berizin Resmi (SIAP HIMPSI &amp; SIPP)</span>
@@ -255,9 +266,7 @@ export const PsychologistsPage: React.FC = () => {
                       src={psych.profileImage || psych.cardImage}
                       alt={psych.fullName}
                       className="w-full h-full object-cover object-top mix-blend-multiply transition-transform duration-500 group-hover:scale-104"
-                      onError={(e) => {
-                        ;(e.target as HTMLImageElement).src = '/Soulaide Psi Arc Logo.png'
-                      }}
+                      onError={handleImageFallback}
                     />
                     <div className="absolute top-3.5 right-3.5">
                       {getPresencePill(psych.presence)}

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client.ts'
 
 export interface SiteSettings {
@@ -9,14 +9,16 @@ export interface SiteSettings {
 }
 
 export const fallbackSettings: SiteSettings = {
-  whatsappNumber: '+6289630869804',
+  whatsappNumber: '+62 896-3086-9804',
   defaultMessage: 'Halo Soulaide, saya ingin bertanya mengenai layanan dan proses booking konseling.',
   minimumLeadTimeHours: 24,
   offlineAddress: 'Pondok Bambu, Duren Sawit, Jakarta Timur, DKI Jakarta, Indonesia',
 }
 
 export function useSiteSettings() {
-  return useQuery<SiteSettings>({
+  const queryClient = useQueryClient()
+
+  const query = useQuery<SiteSettings>({
     queryKey: ['soulaide-site-settings'],
     queryFn: async () => {
       try {
@@ -56,4 +58,58 @@ export function useSiteSettings() {
     },
     initialData: fallbackSettings,
   })
+
+  const updateMutation = useMutation({
+    mutationFn: async (newSettings: Partial<SiteSettings>) => {
+      // Update whatsapp
+      if (newSettings.whatsappNumber || newSettings.defaultMessage) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('Soulaide_site_settings') as any).upsert({
+          key: 'whatsapp',
+          value: {
+            phone_number: newSettings.whatsappNumber || query.data.whatsappNumber,
+            default_message: newSettings.defaultMessage || query.data.defaultMessage,
+          },
+          updated_at: new Date().toISOString(),
+        })
+      }
+
+      // Update booking policy
+      if (newSettings.minimumLeadTimeHours !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('Soulaide_site_settings') as any).upsert({
+          key: 'booking_policy',
+          value: {
+            minimum_lead_time_hours: newSettings.minimumLeadTimeHours,
+          },
+          updated_at: new Date().toISOString(),
+        })
+      }
+
+      // Update offline location
+      if (newSettings.offlineAddress) {
+        const parts = newSettings.offlineAddress.split(',').map((s) => s.trim())
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('Soulaide_site_settings') as any).upsert({
+          key: 'offline_location',
+          value: {
+            subdistrict: parts[0] || 'Pondok Bambu',
+            city: parts[1] || 'Jakarta Timur',
+            province: 'DKI Jakarta',
+            country: 'Indonesia',
+          },
+          updated_at: new Date().toISOString(),
+        })
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-site-settings'] })
+    },
+  })
+
+  return {
+    ...query,
+    updateSettings: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
+  }
 }

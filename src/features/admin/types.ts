@@ -5,6 +5,7 @@ export type AdminTab =
   | 'overview'
   | 'bookings'
   | 'payments'
+  | 'landing'
   | 'services'
   | 'psychologists'
   | 'staff'

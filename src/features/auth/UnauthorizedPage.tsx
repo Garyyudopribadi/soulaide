@@ -3,21 +3,10 @@ import { Link } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { useAuth } from './useAuth.ts'
+import { getRoleDashboardPath } from './auth-context.ts'
 
 export const UnauthorizedPage: React.FC = () => {
   const { role } = useAuth()
-
-  const getDashboardLink = () => {
-    switch (role) {
-      case 'admin':
-      case 'super_admin':
-        return '/admin'
-      case 'psychologist':
-        return '/psychologist'
-      default:
-        return '/dashboard'
-    }
-  }
 
   return (
     <div className="min-h-[65vh] flex flex-col items-center justify-center text-center px-4 py-16">
@@ -29,7 +18,7 @@ export const UnauthorizedPage: React.FC = () => {
         Anda tidak memiliki izin untuk mengakses halaman ini. Peran akun Anda ({role ?? 'tamu'}) tidak memiliki wewenang untuk area yang diminta.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link to={getDashboardLink()}>
+        <Link to={getRoleDashboardPath(role)}>
           <Button className="rounded-full px-6">Menuju Dashboard Anda</Button>
         </Link>
         <Link to="/">

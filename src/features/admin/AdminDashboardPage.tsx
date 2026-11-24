@@ -17,6 +17,7 @@ import { AdminCmsServices } from './AdminCmsServices'
 import { AdminCmsPsychologists } from './AdminCmsPsychologists'
 import { AdminCmsFaqs } from './AdminCmsFaqs'
 import { AdminCmsSettings } from './AdminCmsSettings'
+import { AdminCmsLanding } from './AdminCmsLanding'
 import type { AdminTab } from './types'
 import {
   LayoutDashboard,
@@ -28,6 +29,7 @@ import {
   Activity,
   HelpCircle,
   Settings,
+  Globe,
 } from 'lucide-react'
 
 export const AdminDashboardPage: React.FC = () => {
@@ -115,6 +117,7 @@ export const AdminDashboardPage: React.FC = () => {
     {
       label: 'Pengelolaan',
       items: [
+        { key: 'landing', label: 'Konten Landing Page', icon: Globe },
         { key: 'services', label: 'Layanan & Tarif', icon: FileText },
         { key: 'psychologists', label: 'Profil Psikolog', icon: Users },
         { key: 'faqs', label: 'Pusat Bantuan', icon: HelpCircle },
@@ -155,7 +158,7 @@ export const AdminDashboardPage: React.FC = () => {
   if (loadingKpis) {
     return (
       <DashboardShell {...shellProps}>
-        <LoadingState message="Memuat pusat kendali operasional..." />
+        <LoadingState message="Memuat dashboard operasional..." />
       </DashboardShell>
     )
   }
@@ -198,9 +201,9 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="space-y-5">
           <DashboardSubHeader
             eyebrow="Keuangan"
-            title="Rekonsiliasi"
+            title="Transaksi &"
             accent="Pembayaran"
-            description="Cocokkan transaksi Midtrans, telusuri status pembayaran, dan proses refund sesuai kebijakan."
+            description="Pantau pembayaran Midtrans, telusuri status transaksi, dan kelola refund secara transparan."
           />
           <AdminPaymentsTab
             payments={payments}
@@ -212,6 +215,7 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'landing' && <AdminCmsLanding />}
       {activeTab === 'services' && <AdminCmsServices />}
       {activeTab === 'psychologists' && <AdminCmsPsychologists />}
 
@@ -235,9 +239,9 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="space-y-5">
           <DashboardSubHeader
             eyebrow="Tata Kelola"
-            title="Jejak Audit"
+            title="Catatan Audit"
             accent="Sistem"
-            description="Riwayat perubahan status, refund, penugasan psikolog, dan mutasi hak akses."
+            description="Riwayat perubahan status sesi, refund, penugasan psikolog, serta pembaruan otoritas staf."
           />
           <AdminAuditLogsTab logs={auditLogs} />
         </div>

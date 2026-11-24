@@ -1,20 +1,41 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { ShieldCheck, Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Card, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { supabase } from '@/lib/supabase/client.ts'
 import { useAuth } from './useAuth.ts'
+import { getRoleDashboardPath } from './auth-context.ts'
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { refreshProfile } = useAuth()
+  const { user, role, loading: authLoading, refreshProfile } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // If already authenticated with a resolved role, immediately redirect to their proper dashboard
+  useEffect(() => {
+    if (!authLoading && user && role) {
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname
+      let destination = getRoleDashboardPath(role)
+      if (from && from !== '/login' && from !== '/unauthorized') {
+        if (from.startsWith('/admin') && (role === 'admin' || role === 'super_admin')) {
+          destination = from
+        } else if (from.startsWith('/psychologist') && (role === 'psychologist' || role === 'super_admin')) {
+          destination = from
+        } else if (from.startsWith('/dashboard') && (role === 'customer' || role === 'super_admin')) {
+          destination = from
+        } else if (!from.startsWith('/admin') && !from.startsWith('/psychologist') && !from.startsWith('/dashboard')) {
+          destination = from
+        }
+      }
+      navigate(destination, { replace: true })
+    }
+  }, [user, role, authLoading, navigate, location.state])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,14 +51,31 @@ export const LoginPage: React.FC = () => {
       if (error) {
         setErrorMessage(error.message)
       } else if (data.user) {
-        await refreshProfile()
+        // Explicitly pass data.user.id to fetch and receive the resolved role immediately
+        const resolvedRole = await refreshProfile(data.user.id)
 
         const from = (location.state as { from?: { pathname: string } })?.from?.pathname
-        if (from && from !== '/login') {
-          navigate(from, { replace: true })
-        } else {
-          navigate('/dashboard', { replace: true })
+        let destination = getRoleDashboardPath(resolvedRole)
+
+        if (from && from !== '/login' && from !== '/unauthorized') {
+          if (from.startsWith('/admin')) {
+            if (resolvedRole === 'admin' || resolvedRole === 'super_admin') {
+              destination = from
+            }
+          } else if (from.startsWith('/psychologist')) {
+            if (resolvedRole === 'psychologist' || resolvedRole === 'super_admin') {
+              destination = from
+            }
+          } else if (from.startsWith('/dashboard')) {
+            if (resolvedRole === 'customer' || resolvedRole === 'super_admin') {
+              destination = from
+            }
+          } else {
+            destination = from
+          }
         }
+
+        navigate(destination, { replace: true })
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'Gagal melakukan login')
@@ -46,40 +84,51 @@ export const LoginPage: React.FC = () => {
     }
   }
 
-  return (
-    <div className="relative py-16 sm:py-20 px-4 overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[32rem] h-[20rem] bg-plum-200/35 rounded-full blur-3xl pointer-events-none" />
+  const fillQuickAccount = (quickEmail: string, quickPwd: string) => {
+    setEmail(quickEmail)
+    setPassword(quickPwd)
+    setErrorMessage(null)
+  }
 
-      <div className="relative z-10 max-w-md mx-auto space-y-6">
+  return (
+    <div className="relative py-14 sm:py-20 px-4 min-h-[82vh] flex items-center justify-center">
+      <div className="relative z-10 w-full max-w-md mx-auto space-y-6">
+        {/* Brand Header */}
         <div className="text-center space-y-3">
-          <Link to="/" className="inline-flex p-2.5 rounded-2xl bg-white border border-[#EAE3DC] shadow-xs group" aria-label="Beranda Soulaide">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center group"
+            aria-label="Kembali ke Beranda Soulaide"
+          >
             <img
-              src="/Soulaide Psi Arc Logo.png"
-              alt="Soulaide"
-              className="h-11 w-auto object-contain transition-transform group-hover:scale-105"
+              src="/Soulaide Psi Arc Logo.webp"
+              alt="Soulaide Psychology"
+              className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
+
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1E1429] tracking-tight">
-              Masuk ke <span className="font-serif italic font-semibold text-plum-700">Portal Klien</span>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink tracking-tight">
+              Masuk ke <span className="italic text-plum-700">Portal Layanan</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#645A70] max-w-xs mx-auto leading-relaxed">
-              Akses jadwal konseling aktif, riwayat sesi, dan laporan evaluasi klinis Anda.
+            <p className="text-xs sm:text-sm text-ink-muted max-w-xs mx-auto leading-relaxed">
+              Akses jadwal konseling aktif, riwayat sesi privat, dan laporan klinis Anda.
             </p>
           </div>
         </div>
 
-        <Card className="rounded-3xl border-[#EAE3DC] bg-white shadow-[0_18px_40px_-20px_rgba(41,23,56,0.16)]">
+        {/* Login Card */}
+        <Card className="rounded-xl border border-line bg-paper-card shadow-[0_12px_32px_-16px_rgba(41,23,56,0.12)]">
           <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4 pt-7">
+            <CardContent className="space-y-4 pt-6">
               {errorMessage && (
-                <div className="p-3.5 text-xs bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
+                <div className="p-3.5 text-xs bg-rose-50 text-rose-800 rounded-md border border-rose-200">
                   {errorMessage}
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
+                <label className="text-xs font-mono font-bold text-ink-muted uppercase tracking-wider flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-plum-600" />
                   Alamat Email
                 </label>
@@ -89,13 +138,13 @@ export const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@email.com"
-                  className="w-full px-4 py-3 text-sm border border-[#DFD7CE] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-50 focus:bg-white transition-all"
+                  className="w-full px-3.5 py-2.5 text-sm border border-line rounded-md focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-600 bg-white transition-all text-ink"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-xs font-mono font-bold text-ink-muted uppercase tracking-wider flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-plum-600" />
                     Kata Sandi
                   </label>
@@ -113,12 +162,12 @@ export const LoginPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-4 pr-11 py-3 text-sm border border-[#DFD7CE] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-50 focus:bg-white transition-all"
+                    className="w-full pl-3.5 pr-11 py-2.5 text-sm border border-line rounded-md focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-600 bg-white transition-all text-ink"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#8E81A1] hover:text-plum-700 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-plum-700 cursor-pointer"
                     aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -127,24 +176,63 @@ export const LoginPage: React.FC = () => {
               </div>
             </CardContent>
 
-            <CardFooter className="flex-col gap-3.5 pt-2 border-t-0">
-              <Button type="submit" className="w-full h-11 rounded-xl gap-2" disabled={loading}>
+            <CardFooter className="flex-col gap-3 pt-2 border-t border-[#EDE6D9]">
+              <Button
+                type="submit"
+                className="w-full h-11 rounded-sm bg-plum-900 hover:bg-plum-800 text-white font-semibold gap-2 cursor-pointer shadow-xs"
+                disabled={loading}
+              >
                 <span>{loading ? 'Memverifikasi...' : 'Masuk ke Akun'}</span>
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </Button>
-              <p className="text-xs text-center text-[#645A70] pt-1">
+
+              <p className="text-xs text-center text-ink-muted pt-1">
                 Belum memiliki akun?{' '}
-                <Link to="/register" className="text-plum-700 font-bold hover:underline">
-                  Daftar sekarang
+                <Link to="/register" className="text-plum-800 font-bold hover:underline">
+                  Daftar akun baru
                 </Link>
               </p>
             </CardFooter>
           </form>
+
+          {/* Quick Demo Credentials Strip */}
+          <div className="p-4 bg-sanctuary-100/90 border-t border-line space-y-2 rounded-b-xl">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-muted block">
+              Pilih Akun Demo Cepat:
+            </span>
+            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('admin@soulaide.id', 'AdminSoulaide2026!')}
+                className="px-2 py-1.5 rounded-sm bg-white border border-line text-ink font-semibold hover:border-plum-400 transition-colors cursor-pointer text-center truncate"
+                title="Super Admin: admin@soulaide.id"
+              >
+                Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('finandita@soulaide.id', 'Psikolog2026!')}
+                className="px-2 py-1.5 rounded-sm bg-white border border-line text-ink font-semibold hover:border-plum-400 transition-colors cursor-pointer text-center truncate"
+                title="Psikolog: finandita@soulaide.id"
+              >
+                Psikolog
+              </button>
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('klien@soulaide.id', 'KlienSoulaide2026!')}
+                className="px-2 py-1.5 rounded-sm bg-white border border-line text-ink font-semibold hover:border-plum-400 transition-colors cursor-pointer text-center truncate"
+                title="Klien: klien@soulaide.id"
+              >
+                Klien
+              </button>
+            </div>
+          </div>
         </Card>
 
-        <div className="text-center text-xs text-[#7A6F85] flex items-center justify-center gap-1.5">
+        {/* Security Assurance */}
+        <div className="text-center text-xs text-ink-muted flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4 text-plum-600" />
-          <span>Koneksi aman berstandar enkripsi data medis & HIMPSI</span>
+          <span>Koneksi aman berstandar enkripsi data medis &amp; HIMPSI</span>
         </div>
       </div>
     </div>

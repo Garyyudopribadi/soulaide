@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cn, formatIDR } from './utils.ts'
+import { cn, formatIDR, formatWhatsAppNumber, cleanWhatsAppNumber } from './utils.ts'
 
 describe('cn utility', () => {
   it('combines class names correctly', () => {
@@ -15,5 +15,18 @@ describe('formatIDR utility', () => {
   it('formats Indonesian Rupiah properly', () => {
     const formatted = formatIDR(110000)
     expect(formatted).toContain('110.000')
+  })
+})
+
+describe('WhatsApp formatting utilities', () => {
+  it('formats Indonesian mobile numbers to standard display format', () => {
+    expect(formatWhatsAppNumber('+6289630869804')).toBe('+62 896-3086-9804')
+    expect(formatWhatsAppNumber('6289630869804')).toBe('+62 896-3086-9804')
+    expect(formatWhatsAppNumber('089630869804')).toBe('+62 896-3086-9804')
+  })
+
+  it('cleans WhatsApp numbers for wa.me URLs', () => {
+    expect(cleanWhatsAppNumber('+62 896-3086-9804')).toBe('6289630869804')
+    expect(cleanWhatsAppNumber('0896-3086-9804')).toBe('6289630869804')
   })
 })

@@ -46,16 +46,14 @@ export const RegisterPage: React.FC = () => {
   }
 
   return (
-    <div className="relative py-16 sm:py-20 px-4 overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[32rem] h-[20rem] bg-plum-200/35 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="relative py-16 sm:py-20 px-4">
       <div className="relative z-10 max-w-md mx-auto space-y-6">
         <div className="text-center space-y-3">
-          <Link to="/" className="inline-flex p-2.5 rounded-2xl bg-white border border-[#EAE3DC] shadow-xs group" aria-label="Beranda Soulaide">
+          <Link to="/" className="inline-flex items-center gap-2 group cursor-pointer" aria-label="Beranda Soulaide">
             <img
-              src="/Soulaide Psi Arc Logo.png"
+              src="/Soulaide Psi Arc Logo.webp"
               alt="Soulaide"
-              className="h-11 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
           <div className="space-y-1">
@@ -68,10 +66,10 @@ export const RegisterPage: React.FC = () => {
           </div>
         </div>
 
-        <Card className="rounded-3xl border-[#EAE3DC] bg-white shadow-[0_18px_40px_-20px_rgba(41,23,56,0.16)]">
+        <Card className="rounded-xl border border-line bg-paper-card shadow-[0_12px_32px_-16px_rgba(41,23,56,0.12)]">
           {isSuccess ? (
             <CardContent className="space-y-5 text-center p-7">
-              <div className="p-4 bg-plum-50 text-plum-900 rounded-2xl flex items-start gap-3 text-left border border-plum-200/70">
+              <div className="p-4 bg-plum-50/70 text-plum-900 rounded-lg flex items-start gap-3 text-left border border-plum-200/80">
                 <CheckCircle2 className="w-5 h-5 text-plum-700 shrink-0 mt-0.5" />
                 <div className="text-xs space-y-1">
                   <p className="font-bold text-sm">Pendaftaran Berhasil!</p>
@@ -81,20 +79,20 @@ export const RegisterPage: React.FC = () => {
                 </div>
               </div>
               <Link to="/login" className="block">
-                <Button className="w-full h-11 rounded-xl">Menuju Halaman Masuk</Button>
+                <Button className="w-full h-11 rounded-lg">Menuju Halaman Masuk</Button>
               </Link>
             </CardContent>
           ) : (
             <form onSubmit={handleRegister}>
               <CardContent className="space-y-4 pt-7">
                 {errorMessage && (
-                  <div className="p-3.5 text-xs bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
+                  <div className="p-3.5 text-xs bg-rose-50 text-rose-800 rounded-lg border border-rose-200">
                     {errorMessage}
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-xs font-semibold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-plum-600" />
                     Nama Lengkap
                   </label>
@@ -104,12 +102,12 @@ export const RegisterPage: React.FC = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Nama Lengkap Anda"
-                    className="w-full px-4 py-3 text-sm border border-[#DFD7CE] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-50 focus:bg-white transition-all"
+                    className="w-full px-4 py-2.5 text-sm border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-plum-500/20 focus:border-plum-600 bg-sanctuary-50/70 focus:bg-paper-card transition-all"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-xs font-semibold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-plum-600" />
                     Alamat Email
                   </label>
@@ -119,12 +117,12 @@ export const RegisterPage: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nama@email.com"
-                    className="w-full px-4 py-3 text-sm border border-[#DFD7CE] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-50 focus:bg-white transition-all"
+                    className="w-full px-4 py-2.5 text-sm border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-plum-500/20 focus:border-plum-600 bg-sanctuary-50/70 focus:bg-paper-card transition-all"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-xs font-semibold text-[#3C3148] uppercase tracking-wider flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-plum-600" />
                     Kata Sandi Baru (Minimal 6 karakter)
                   </label>
@@ -136,7 +134,7 @@ export const RegisterPage: React.FC = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-4 pr-11 py-3 text-sm border border-[#DFD7CE] rounded-xl focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 focus:border-plum-500 bg-sanctuary-50 focus:bg-white transition-all"
+                      className="w-full pl-4 pr-11 py-2.5 text-sm border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-plum-500/20 focus:border-plum-600 bg-sanctuary-50/70 focus:bg-paper-card transition-all"
                     />
                     <button
                       type="button"
@@ -151,7 +149,7 @@ export const RegisterPage: React.FC = () => {
               </CardContent>
 
               <CardFooter className="flex-col gap-3.5 pt-2 border-t-0">
-                <Button type="submit" className="w-full h-11 rounded-xl gap-2" disabled={loading}>
+                <Button type="submit" className="w-full h-11 rounded-lg gap-2" disabled={loading}>
                   <span>{loading ? 'Mendaftarkan Akun...' : 'Daftar Akun Baru'}</span>
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </Button>

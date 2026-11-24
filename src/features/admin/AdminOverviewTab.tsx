@@ -147,11 +147,11 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
   return (
     <div className="space-y-5">
       <DashboardPageHeader
-        eyebrow="Pusat Kendali Operasional"
+        eyebrow="Ringkasan Operasional"
         title="Selamat bertugas,"
         accent="Administrator"
         icon={ShieldCheck}
-        description="Pantau alur reservasi, kesiapan tim klinis, rekonsiliasi pembayaran, dan kesehatan operasional Soulaide dalam satu tampilan."
+        description="Pantau alur reservasi, kesiapan tim psikolog, transaksi pembayaran, dan operasional layanan Soulaide dalam satu tampilan."
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -217,8 +217,8 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
           <DashboardSection
-            title="Perlu tindakan"
-            description="Antrean operasional yang sebaiknya diselesaikan lebih dahulu."
+            title="Perlu Ditindaklanjuti"
+            description="Daftar reservasi dan transaksi yang memerlukan konfirmasi segera."
             icon={AlertTriangle}
             action={
               actionItems.length > 0 ? (
@@ -417,8 +417,8 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
 
         <div className="space-y-5">
           <DashboardSection
-            title="Beban 7 hari ke depan"
-            description="Jumlah sesi aktif per hari."
+            title="Sesi booking 7 hari ke depan"
+            description="Perkiraan jadwal dan jumlah sesi per hari."
             icon={CalendarDays}
           >
             <WeeklyLoadChart
@@ -432,16 +432,16 @@ export const AdminOverviewTab: React.FC<AdminOverviewTabProps> = ({
           </DashboardSection>
 
           <DashboardSection
-            title="Distribusi status"
-            description="Komposisi seluruh reservasi."
+            title="Status Pemesanan"
+            description="Ringkasan status seluruh sesi booking."
             icon={FileText}
           >
             <StatusBreakdown items={statusItems} />
           </DashboardSection>
 
           <DashboardSection
-            title="Kesiapan ekosistem"
-            description="Ringkasan kapasitas dan katalog aktif."
+            title="Kapasitas & Layanan Aktif"
+            description="Ketersediaan psikolog dan katalog layanan."
             icon={Users}
           >
             <div className="space-y-3">

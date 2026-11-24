@@ -16,8 +16,21 @@ export interface AuthContextType {
   profile: UserProfile | null
   role: UserRole | null
   loading: boolean
-  refreshProfile: () => Promise<void>
+  refreshProfile: (explicitUserId?: string) => Promise<UserRole>
   signOut: () => Promise<void>
+}
+
+export const getRoleDashboardPath = (role?: UserRole | null): string => {
+  switch (role) {
+    case 'super_admin':
+    case 'admin':
+      return '/admin'
+    case 'psychologist':
+      return '/psychologist'
+    case 'customer':
+    default:
+      return '/dashboard'
+  }
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)

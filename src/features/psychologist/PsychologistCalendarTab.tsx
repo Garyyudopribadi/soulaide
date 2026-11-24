@@ -1,23 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, ShieldCheck, Loader2 } from 'lucide-react';
 import type { ScheduleDayItem } from './types';
 import { psychologistService } from './psychologistService';
 
 interface PsychologistCalendarTabProps {
+  psychologistId?: string;
   schedules: ScheduleDayItem[];
   onSchedulesUpdated: () => void;
 }
 
 export const PsychologistCalendarTab: React.FC<PsychologistCalendarTabProps> = ({
+  psychologistId,
   schedules: initialSchedules,
   onSchedulesUpdated,
 }) => {
   const [schedules, setSchedules] = useState<ScheduleDayItem[]>(initialSchedules);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (initialSchedules && initialSchedules.length > 0) {
+      setSchedules(initialSchedules);
+    }
+  }, [initialSchedules]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleToggleDay = (dayIndex: number) => {
     setSchedules((prev) =>
@@ -34,25 +45,19 @@ export const PsychologistCalendarTab: React.FC<PsychologistCalendarTabProps> = (
   const handleSave = async () => {
     setSaving(true);
     setNotice(null);
+    setErrorNotice(null);
 
     try {
-      for (const item of schedules) {
-        if (!item.id.startsWith('default-')) {
-          await psychologistService.updateSchedule(
-            item.id,
-            item.is_active,
-            item.start_time,
-            item.end_time
-          );
-        }
+      if (!psychologistId) {
+        throw new Error('ID profil psikolog tidak ditemukan. Silakan hubungkan akun dengan profil psikolog.');
       }
-      setNotice('Jadwal ketersediaan mingguan berhasil diperbarui.');
+      await psychologistService.saveWeeklySchedules(psychologistId, schedules);
+      setNotice('Jadwal ketersediaan mingguan berhasil diperbarui dan tersimpan.');
       onSchedulesUpdated();
       setTimeout(() => setNotice(null), 3000);
     } catch (err: unknown) {
       console.error(err);
-      setNotice('Jadwal disimpan dalam sesi aktif Anda.');
-      setTimeout(() => setNotice(null), 3000);
+      setErrorNotice(err instanceof Error ? err.message : 'Gagal memperbarui jadwal ketersediaan.');
     } finally {
       setSaving(false);
     }
@@ -61,9 +66,16 @@ export const PsychologistCalendarTab: React.FC<PsychologistCalendarTabProps> = (
   return (
     <div className="space-y-6">
       {notice && (
-        <div className="p-4 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-medium rounded-xl flex items-center gap-2 border border-emerald-200">
+        <div className="p-4 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-medium rounded-xl flex items-center gap-2 border border-emerald-200 shadow-sm animate-in fade-in duration-200">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{notice}</span>
+        </div>
+      )}
+
+      {errorNotice && (
+        <div className="p-4 bg-red-50 text-red-700 text-xs sm:text-sm font-medium rounded-xl flex items-center gap-2 border border-red-200 shadow-sm animate-in fade-in duration-200">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+          <span>{errorNotice}</span>
         </div>
       )}
 
@@ -150,9 +162,16 @@ export const PsychologistCalendarTab: React.FC<PsychologistCalendarTabProps> = (
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-plum-600 hover:bg-plum-700 text-white text-xs px-5 font-semibold"
+            className="bg-plum-600 hover:bg-plum-700 text-white text-xs px-5 font-semibold flex items-center gap-1.5"
           >
-            {saving ? 'Menyimpan Jadwal...' : 'Simpan Ketersediaan Jadwal'}
+            {saving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Menyimpan Jadwal...</span>
+              </>
+            ) : (
+              <span>Simpan Ketersediaan Jadwal</span>
+            )}
           </Button>
         </CardFooter>
       </Card>

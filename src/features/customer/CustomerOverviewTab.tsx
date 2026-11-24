@@ -185,7 +185,7 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({
   return (
     <div className="space-y-5">
       <DashboardPageHeader
-        eyebrow="Portal Klien Terintegrasi"
+        eyebrow="Ruang Klien"
         title={`Halo, ${fullName.split(' ')[0] || 'Sahabat Soulaide'}.`}
         accent="Ruang tenang Anda."
         icon={HeartHandshake}

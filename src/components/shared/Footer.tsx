@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   MapPin,
   Clock,
@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
 } from 'lucide-react'
+import { getAssetUrl, handleImageFallback } from '@/lib/utils.ts'
+import { useLandingContent } from '@/features/public-site/useLandingContent.ts'
 
 const InstagramIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
   <svg
@@ -56,7 +58,43 @@ const FacebookIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' 
   </svg>
 )
 
+const YoutubeIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+    fill="currentColor"
+    className={className}
+    aria-hidden="true"
+  >
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+  </svg>
+)
+
 export const Footer: React.FC = () => {
+  const location = useLocation()
+  const { data: landingContent } = useLandingContent()
+  const footerData = landingContent.footer
+  const heroData = landingContent.hero
+
+  const handleAnchorClick = (to: string, e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (to.includes('#') && location.pathname === '/') {
+      const hash = to.split('#')[1]
+      if (hash) {
+        e.preventDefault()
+        const el = document.getElementById(hash)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' })
+          if (!el.hasAttribute('tabindex')) {
+            el.setAttribute('tabindex', '-1')
+          }
+          el.focus({ preventScroll: true })
+          window.history.pushState(null, '', `/#${hash}`)
+        }
+      }
+    }
+  }
+
   return (
     <footer className="bg-plum-950 text-[#D7CEE0] mt-auto relative overflow-hidden">
       {/* Subtle Ambient Aura */}
@@ -89,11 +127,12 @@ export const Footer: React.FC = () => {
           {/* Brand Column (5 cols) */}
           <div className="lg:col-span-5 space-y-5">
             <Link to="/" className="inline-flex items-center gap-3.5 group" aria-label="Beranda Soulaide">
-              <div className="p-2 rounded-2xl bg-white/95 shadow-md transition-transform duration-300 group-hover:scale-105">
+              <div className="transition-transform duration-300 group-hover:scale-105">
                 <img
-                  src="/Soulaide Psi Arc Logo.png"
+                  src={heroData.logo_image || getAssetUrl('/Soulaide Psi Arc Logo.webp')}
                   alt="Soulaide Psychology"
-                  className="h-10 w-auto object-contain"
+                  onError={handleImageFallback}
+                  className="h-10 w-auto object-contain brightness-110 drop-shadow-[0_2px_8px_rgba(255,255,255,0.15)]"
                 />
               </div>
               <div className="flex flex-col leading-none">
@@ -107,13 +146,13 @@ export const Footer: React.FC = () => {
             </Link>
 
             <p className="text-sm text-[#B7ABCA] leading-relaxed max-w-sm">
-              Ruang aman dan hangat untuk perjalanan kesehatan mental Anda. Didampingi psikolog klinis berlisensi secara privat, empatik, dan berlandaskan Kode Etik HIMPSI.
+              {footerData.tagline}
             </p>
 
             {/* Social Media */}
             <div className="flex items-center gap-2.5 pt-1">
               <a
-                href="https://instagram.com/soulaide"
+                href={footerData.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
@@ -123,7 +162,7 @@ export const Footer: React.FC = () => {
                 <InstagramIcon className="w-4 h-4" />
               </a>
               <a
-                href="https://threads.net/@soulaide"
+                href={footerData.threads}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
@@ -133,7 +172,7 @@ export const Footer: React.FC = () => {
                 <ThreadsIcon className="w-4 h-4" />
               </a>
               <a
-                href="https://facebook.com/soulaide"
+                href={footerData.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
@@ -141,6 +180,16 @@ export const Footer: React.FC = () => {
                 title="Facebook Soulaide"
               >
                 <FacebookIcon className="w-4 h-4" />
+              </a>
+              <a
+                href={footerData.youtube || 'https://youtube.com/@soulaide'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] hover:text-white hover:border-plum-400/60 hover:bg-plum-700/60 flex items-center justify-center transition-all"
+                aria-label="Kunjungi Channel YouTube Soulaide"
+                title="YouTube Soulaide"
+              >
+                <YoutubeIcon className="w-4 h-4" />
               </a>
             </div>
 
@@ -161,25 +210,37 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2.5 text-sm text-[#C8BCD8]">
               <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                <Link
+                  to="/#layanan"
+                  onClick={(e) => handleAnchorClick('/#layanan', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
                   Layanan Konseling Individu
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                <Link
+                  to="/#layanan"
+                  onClick={(e) => handleAnchorClick('/#layanan', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
                   Layanan MHCU (Check Up)
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                <Link
+                  to="/#layanan"
+                  onClick={(e) => handleAnchorClick('/#layanan', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
                   Bundling MHCU + Konseling
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
               </li>
               <li className="pt-1 text-xs text-plum-300/80">
-                Daring & Tatap Muka
+                Daring &amp; Tatap Muka
               </li>
             </ul>
           </div>
@@ -191,7 +252,11 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2.5 text-sm text-[#C8BCD8]">
               <li>
-                <Link to="/psychologists" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                <Link
+                  to="/#psikolog"
+                  onClick={(e) => handleAnchorClick('/#psikolog', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
                   Profil Psikolog
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
@@ -203,14 +268,22 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
+                <Link
+                  to="/#faq"
+                  onClick={(e) => handleAnchorClick('/#faq', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
                   Pertanyaan Umum
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="hover:text-white transition-colors inline-flex items-center gap-1 group">
-                  Kontak & Lokasi
+                <Link
+                  to="/#kontak"
+                  onClick={(e) => handleAnchorClick('/#kontak', e)}
+                  className="hover:text-white transition-colors inline-flex items-center gap-1 group"
+                >
+                  Kontak &amp; Lokasi
                   <ArrowUpRight className="w-3 h-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 transition-all text-plum-300" />
                 </Link>
               </li>
@@ -245,13 +318,31 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Copyright */}
         <div className="mt-14 pt-7 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8E81A1]">
-          <p>© {new Date().getFullYear()} Soulaide Psychology. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>© {new Date().getFullYear()} {footerData.copyright}</p>
           <div className="flex items-center gap-4">
-            <Link to="/faq" className="hover:text-white transition-colors">Privasi & Kerahasiaan</Link>
+            <Link
+              to="/#faq"
+              onClick={(e) => handleAnchorClick('/#faq', e)}
+              className="hover:text-white transition-colors"
+            >
+              Privasi &amp; Kerahasiaan
+            </Link>
             <span className="opacity-40">•</span>
-            <Link to="/faq" className="hover:text-white transition-colors">Ketentuan Reservasi</Link>
+            <Link
+              to="/#faq"
+              onClick={(e) => handleAnchorClick('/#faq', e)}
+              className="hover:text-white transition-colors"
+            >
+              Ketentuan Reservasi
+            </Link>
             <span className="opacity-40">•</span>
-            <Link to="/contact" className="hover:text-white transition-colors">Bantuan</Link>
+            <Link
+              to="/#kontak"
+              onClick={(e) => handleAnchorClick('/#kontak', e)}
+              className="hover:text-white transition-colors"
+            >
+              Bantuan
+            </Link>
           </div>
         </div>
       </div>

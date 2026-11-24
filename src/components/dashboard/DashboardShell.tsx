@@ -101,7 +101,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 p-1.5">
             <img
-              src="/Soulaide Psi Arc Logo.png"
+              src="/Soulaide Psi Arc Logo.webp"
               alt=""
               className="h-full w-full object-contain"
             />

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client.ts'
+import { getAssetUrl } from '@/lib/utils.ts'
 import type { BookingStatus, DeliveryMethod } from '@/types/index.ts'
 import { validateBookingLeadTime, validateRescheduleEligibility } from './availability.ts'
 
@@ -176,7 +177,7 @@ export async function fetchCustomerBookings(customerId: string): Promise<Custome
           id: item.psychologist?.id || '',
           fullName: item.psychologist?.full_name || 'Psikolog Soulaide',
           credentials: item.psychologist?.credentials || 'Psikolog',
-          cardImageUrl: item.psychologist?.card_image_url || '/Soulaide Psi Arc Logo.png',
+          cardImageUrl: item.psychologist?.card_image_url || getAssetUrl('/Soulaide Psi Arc Logo.webp'),
         },
       }
     })

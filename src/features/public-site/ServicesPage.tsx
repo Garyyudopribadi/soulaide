@@ -21,14 +21,14 @@ import { Button } from '@/components/ui/button.tsx'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
 import { useServices } from '@/features/services/useServices.ts'
-import { formatIDR } from '@/lib/utils.ts'
+import { formatIDR, getAssetUrl } from '@/lib/utils.ts'
 import type { ProfessionalTier } from '@/types/index.ts'
 
 const BROCHURE_GALLERY = [
-  { label: 'Katalog Layanan Utama', src: '/Layanan Kesehatan Mental.jpg' },
-  { label: 'Konseling Individu', src: '/layanan/Konseling Individu.jpg' },
-  { label: 'MHCU & Paket Bundling', src: '/layanan/Konseling Mental Health Check Up.png' },
-  { label: 'Tarif Psikolog Soul Expert', src: '/layanan/Online Offline.jpg' },
+  { label: 'Katalog Layanan Utama', src: getAssetUrl('/Layanan Kesehatan Mental.webp') },
+  { label: 'Konseling Individu', src: getAssetUrl('/layanan/Konseling Individu.webp') },
+  { label: 'MHCU & Paket Bundling', src: getAssetUrl('/layanan/Konseling Mental Health Check Up.webp') },
+  { label: 'Tarif Psikolog Soul Expert', src: getAssetUrl('/layanan/Online Offline.webp') },
 ] as const
 
 export const ServicesPage: React.FC = () => {
@@ -69,9 +69,9 @@ export const ServicesPage: React.FC = () => {
 
   const getServiceBrochure = (title: string): string => {
     const lower = title.toLowerCase()
-    if (lower.includes('bundl') || lower.includes('mhcu')) return '/layanan/Konseling Mental Health Check Up.png'
-    if (lower.includes('individu')) return '/layanan/Konseling Individu.jpg'
-    return '/Layanan Kesehatan Mental.jpg'
+    if (lower.includes('bundl') || lower.includes('mhcu')) return getAssetUrl('/layanan/Konseling Mental Health Check Up.webp')
+    if (lower.includes('individu')) return getAssetUrl('/layanan/Konseling Individu.webp')
+    return getAssetUrl('/Layanan Kesehatan Mental.webp')
   }
 
   const getServiceFeatures = (title: string): string[] => {
@@ -141,7 +141,7 @@ export const ServicesPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setActiveBrochure('/Layanan Kesehatan Mental.jpg')}
+              onClick={() => setActiveBrochure('/Layanan Kesehatan Mental.webp')}
               className="rounded-full bg-white/95 hover:bg-white gap-2 h-11 px-5"
             >
               <FileImage className="w-4 h-4 text-plum-600" />

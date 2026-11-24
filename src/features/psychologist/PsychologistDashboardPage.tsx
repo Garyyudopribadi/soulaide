@@ -67,11 +67,21 @@ export const PsychologistDashboardPage: React.FC = () => {
   ).length
 
   const handlePresenceChange = async (newStatus: PresenceStatus) => {
-    if (!psychologistId) return
-    await psychologistService.updatePresence(psychologistId, newStatus)
-    refetchPresence()
-    setNotice(`Status kehadiran diperbarui menjadi ${newStatus.toUpperCase()}.`)
-    setTimeout(() => setNotice(null), 3000)
+    const targetId = psychologistId || psychologistProfile?.id
+    if (!targetId) {
+      setNotice('Profil psikolog belum terhubung dengan akun Anda.')
+      setTimeout(() => setNotice(null), 4000)
+      return
+    }
+    try {
+      await psychologistService.updatePresence(targetId, newStatus)
+      await refetchPresence()
+      setNotice(`Status kehadiran diperbarui menjadi ${newStatus.toUpperCase()}.`)
+      setTimeout(() => setNotice(null), 3000)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Gagal mengubah status kehadiran')
+      setTimeout(() => setNotice(null), 4000)
+    }
   }
 
   const handleOpenChat = (booking: AssignedBookingItem) => {
@@ -229,6 +239,7 @@ export const PsychologistDashboardPage: React.FC = () => {
             }
           />
           <PsychologistCalendarTab
+            psychologistId={psychologistId || psychologistProfile?.id || ''}
             schedules={schedules}
             onSchedulesUpdated={() => refetchSchedules()}
           />

@@ -2,42 +2,52 @@ import React, { useState } from 'react'
 import { Card } from '@/components/ui/card.tsx'
 import { Button } from '@/components/ui/button.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
-import { useFaqs, type FaqItem } from '@/features/public-site/useFaqs.ts'
+import { useFaqs } from '@/features/public-site/useFaqs.ts'
 import { Plus, Trash2, Check } from 'lucide-react'
 
 export const AdminCmsFaqs: React.FC = () => {
-  const { data: initialFaqs } = useFaqs()
-  const [faqs, setFaqs] = useState<FaqItem[]>(initialFaqs)
+  const { data: faqs, addFaq, deleteFaq } = useFaqs()
   const [newQuestion, setNewQuestion] = useState('')
   const [newAnswer, setNewAnswer] = useState('')
   const [newCategory, setNewCategory] = useState('booking')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const handleAddFaq = (e: React.FormEvent) => {
+  const handleAddFaq = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newQuestion || !newAnswer) return
 
-    const newItem: FaqItem = {
-      id: `faq-${Date.now()}`,
-      question: newQuestion,
-      answer: newAnswer,
-      category: newCategory,
-      display_order: faqs.length + 1,
+    setIsSubmitting(true)
+    try {
+      await addFaq({
+        question: newQuestion,
+        answer: newAnswer,
+        category: newCategory,
+        display_order: faqs.length + 1,
+      })
+      setNewQuestion('')
+      setNewAnswer('')
+      setShowAddForm(false)
+      setNotice('FAQ baru berhasil disimpan ke database!')
+      setTimeout(() => setNotice(null), 3000)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Gagal menambahkan FAQ.')
+      setTimeout(() => setNotice(null), 3000)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setFaqs([...faqs, newItem])
-    setNewQuestion('')
-    setNewAnswer('')
-    setShowAddForm(false)
-    setNotice('FAQ baru berhasil ditambahkan!')
-    setTimeout(() => setNotice(null), 3000)
   }
 
-  const handleDeleteFaq = (id: string) => {
-    setFaqs(faqs.filter((f) => f.id !== id))
-    setNotice('FAQ berhasil dihapus.')
-    setTimeout(() => setNotice(null), 3000)
+  const handleDeleteFaq = async (id: string) => {
+    try {
+      await deleteFaq(id)
+      setNotice('FAQ berhasil dinonaktifkan/dihapus dari database.')
+      setTimeout(() => setNotice(null), 3000)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Gagal menghapus FAQ.')
+      setTimeout(() => setNotice(null), 3000)
+    }
   }
 
   return (
@@ -99,7 +109,9 @@ export const AdminCmsFaqs: React.FC = () => {
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm">Simpan FAQ</Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Menyimpan...' : 'Simpan FAQ'}
+              </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>Batal</Button>
             </div>
           </form>

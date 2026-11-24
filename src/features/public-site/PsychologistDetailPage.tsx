@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
-  Sparkles,
   Award,
   Video,
   MapPin,
@@ -16,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button.tsx'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card.tsx'
 import { usePsychologists } from '@/features/psychologists/usePsychologists.ts'
+import { handleImageFallback } from '@/lib/utils.ts'
 
 export const PsychologistDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -31,10 +31,10 @@ export const PsychologistDetailPage: React.FC = () => {
         <p className="text-sm text-[#645A70]">
           Profil psikolog yang Anda cari tidak tersedia atau sedang dinonaktifkan.
         </p>
-        <Link to="/psychologists">
+        <Link to="/#psikolog">
           <Button variant="outline" className="gap-2 rounded-full">
             <ArrowLeft className="w-4 h-4" />
-            Kembali ke Daftar Psikolog
+            Kembali ke Beranda
           </Button>
         </Link>
       </div>
@@ -49,11 +49,11 @@ export const PsychologistDetailPage: React.FC = () => {
       <section className="relative w-full overflow-hidden border-b border-[#E5DDD4] soulaide-hero-mesh pt-8 pb-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <Link
-            to="/psychologists"
+            to="/#psikolog"
             className="inline-flex items-center gap-2 text-sm font-semibold text-plum-800 hover:text-plum-950 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Kembali ke Direktori Psikolog</span>
+            <span>Kembali ke Beranda</span>
           </Link>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -68,9 +68,9 @@ export const PsychologistDetailPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Sticky Portrait & CTA Column */}
-          <Card className="overflow-hidden rounded-3xl border-[#EAE3DC] bg-white lg:sticky lg:top-24">
+          <Card className="overflow-hidden rounded-2xl border-line bg-paper-card lg:sticky lg:top-24">
             <div
-              className={`relative h-84 overflow-hidden ${
+              className={`relative h-64 sm:h-80 overflow-hidden ${
                 isExpert
                   ? 'bg-gradient-to-b from-champagne-100/80 via-[#F8F3EC] to-[#F3ECE4]'
                   : 'bg-gradient-to-b from-plum-100/75 via-[#F6F2FA] to-[#EFEAF5]'
@@ -79,19 +79,16 @@ export const PsychologistDetailPage: React.FC = () => {
               <img
                 src={psychologist.profileImage || psychologist.cardImage}
                 alt={psychologist.fullName}
-                className="w-full h-full object-cover object-top mix-blend-multiply"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).src = '/Soulaide Psi Arc Logo.png'
-                }}
+                className="w-full h-full object-cover object-[center_15%] mix-blend-multiply"
+                onError={handleImageFallback}
               />
-              <div className="absolute top-4 left-4">
+              <div className="absolute top-3.5 left-3.5">
                 {isExpert ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-champagne-600 text-white text-xs font-bold shadow-md">
-                    <Sparkles className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xs bg-champagne-600 text-white text-[10px] font-mono font-bold uppercase tracking-wider shadow-xs">
                     Soul Expert
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-plum-700 text-white text-xs font-bold shadow-md">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-xs bg-plum-800 text-white text-[10px] font-mono font-bold uppercase tracking-wider shadow-xs">
                     Soul Guidance
                   </span>
                 )}

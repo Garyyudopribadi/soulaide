@@ -78,8 +78,8 @@ INSERT INTO public."Soulaide_psychologists" (
     'Senin – Sabtu, by appointment',
     ARRAY['Pendidikan', 'Inklusi', 'Parenting', 'Pernikahan/Pasangan/Keluarga'],
     ARRAY['ABA', 'CBT'],
-    '/Psikolog/Card - Finandita Utari, M.Psi., Psikolog., CTC., CGA.jpg',
-    '/Psikolog/Profile - Finandita Utari, M.Psi., Psikolog., CTC., CGA.jpg',
+    '/Psikolog/Card - Finandita Utari, M.Psi., Psikolog., CTC., CGA.webp',
+    '/Psikolog/Profile - Finandita Utari, M.Psi., Psikolog., CTC., CGA.webp',
     TRUE
   ),
   (
@@ -92,8 +92,8 @@ INSERT INTO public."Soulaide_psychologists" (
     'Selasa/Rabu 19.30–21.30; Sabtu/Minggu by appointment',
     ARRAY['Stres', 'Kecemasan', 'Overthinking', 'Quarter-Life', 'Karier', 'Relasi', 'Burnout'],
     ARRAY['CBT', 'Humanistic', 'SFBT'],
-    '/Psikolog/Card - Amanda Natasanti S. Psi., Psikolog.jpg',
-    '/Psikolog/Profile - Amanda Natasanti S. Psi., Psikolog.jpg',
+    '/Psikolog/Card - Amanda Natasanti S. Psi., Psikolog.webp',
+    '/Psikolog/Profile - Amanda Natasanti S. Psi., Psikolog.webp',
     TRUE
   ),
   (
@@ -106,8 +106,8 @@ INSERT INTO public."Soulaide_psychologists" (
     'Selasa – Jumat, by appointment',
     ARRAY['Burnout', 'Lingkungan Kerja', 'Pengembangan Diri', 'Quarter-Life', 'Stres', 'Kecemasan', 'Konflik Interpersonal'],
     ARRAY['CBT', 'Humanistic', 'SFBT'],
-    '/Psikolog/Card - Filza Ayska S. S. Psi., Psikolog.jpg',
-    '/Psikolog/Profile - Filza Ayska S. S. Psi., Psikolog.jpg',
+    '/Psikolog/Card - Filza Ayska S. S. Psi., Psikolog.webp',
+    '/Psikolog/Profile - Filza Ayska S. S. Psi., Psikolog.webp',
     TRUE
   ),
   (
@@ -120,8 +120,8 @@ INSERT INTO public."Soulaide_psychologists" (
     'Kamis/Jumat 18.30–21.30; Sabtu/Minggu by appointment',
     ARRAY['Adaptasi', 'Neurodiversity', 'Kecemasan', 'Regulasi Emosi', 'Overthinking', 'Caregiver Burnout', 'Relasi', 'Self-Acceptance'],
     ARRAY['CBT', 'Humanistic', 'SFBT'],
-    '/Psikolog/Card - Narissa Q. Ayunin S. Psi., Psikolog.jpg',
-    '/Psikolog/Profile - Narissa Q. Ayunin S. Psi., Psikolog.jpg',
+    '/Psikolog/Card - Narissa Q. Ayunin S. Psi., Psikolog.webp',
+    '/Psikolog/Profile - Narissa Q. Ayunin S. Psi., Psikolog.webp',
     TRUE
   )
 ON CONFLICT (slug) DO NOTHING;

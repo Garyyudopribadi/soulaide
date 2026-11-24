@@ -10,44 +10,100 @@ import {
   ArrowUpRight,
   Clock,
   Phone,
-  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
 import { useAuth } from '@/features/auth/useAuth.ts'
+import { getRoleDashboardPath } from '@/features/auth/auth-context.ts'
+import { getAssetUrl, handleImageFallback } from '@/lib/utils.ts'
+import { useLandingContent } from '@/features/public-site/useLandingContent.ts'
 
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user, profile, role, signOut } = useAuth()
+  const { data: landingContent } = useLandingContent()
+  const topBar = landingContent.top_bar
+  const hero = landingContent.hero
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState<string>('')
 
+  // Scroll listener for micro-bar collapse and robust scroll spy for active section
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 16)
+
+      if (location.pathname === '/') {
+        // Sections in reverse document order: kontak, faq, layanan, psikolog
+        const sections = ['kontak', 'faq', 'layanan', 'psikolog']
+        const headerOffset = 180 // Navbar height + breathing margin
+        const currentScroll = window.scrollY + headerOffset
+
+        let currentSection = ''
+        for (const sectionId of sections) {
+          const el = document.getElementById(sectionId)
+          if (el) {
+            const top = el.offsetTop
+            if (currentScroll >= top) {
+              currentSection = sectionId
+              break
+            }
+          }
+        }
+        setActiveSection(currentSection)
+      } else {
+        setActiveSection('')
+      }
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [location.pathname])
 
   const navLinks = [
-    { label: 'Beranda', to: '/' },
-    { label: 'Layanan', to: '/services', badge: '3' },
-    { label: 'Psikolog', to: '/psychologists' },
-    { label: 'FAQ', to: '/faq' },
-    { label: 'Kontak', to: '/contact' },
+    { label: 'Beranda', to: '/#' },
+    { label: 'Psikolog', to: '/#psikolog' },
+    { label: 'Layanan', to: '/#layanan', badge: '3' },
+    { label: 'FAQ', to: '/#faq' },
+    { label: 'Kontak', to: '/#kontak' },
   ]
 
-  const getDashboardPath = () => {
-    switch (role) {
-      case 'admin':
-      case 'super_admin':
-        return '/admin'
-      case 'psychologist':
-        return '/psychologist'
-      default:
-        return '/dashboard'
+  const isLinkActive = (to: string) => {
+    if (location.pathname === '/') {
+      if (to === '/#') {
+        return !activeSection && !location.hash
+      }
+      const sectionName = to.replace('/#', '')
+      return activeSection === sectionName || location.hash === `#${sectionName}`
+    }
+    return location.pathname === to
+  }
+
+  const handleNavClick = (to: string, e?: React.MouseEvent) => {
+    setMobileMenuOpen(false)
+    if (to.includes('#') && location.pathname === '/') {
+      const hash = to.split('#')[1]
+      if (hash) {
+        e?.preventDefault()
+        const el = document.getElementById(hash)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' })
+          if (!el.hasAttribute('tabindex')) {
+            el.setAttribute('tabindex', '-1')
+          }
+          el.focus({ preventScroll: true })
+          window.history.pushState(null, '', `/#${hash}`)
+        }
+      } else {
+        e?.preventDefault()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        window.history.pushState(null, '', '/')
+      }
     }
   }
+
+  const getDashboardPath = () => getRoleDashboardPath(role)
 
   const getRoleBadgeVariant = () => {
     switch (role) {
@@ -63,37 +119,37 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Top Clinical Assurance Micro-Bar (Collapses smoothly on scroll) */}
+      {/* Top Clinical Assurance Micro-Bar (Editorial sanctuary tone, clean hairline dividers) */}
       <div
-        className={`hidden lg:block bg-plum-950 text-plum-100/90 border-b border-white/10 transition-all duration-300 overflow-hidden ${
-          scrolled ? 'max-h-0 opacity-0 border-b-0' : 'max-h-10 opacity-100'
+        className={`w-full bg-[#24152A] text-plum-100 border-b border-[#3D2545] transition-all duration-300 overflow-hidden ${
+          scrolled ? 'max-h-0 opacity-0 border-b-0' : 'max-h-24 sm:max-h-11 opacity-100'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5 font-medium text-plum-200">
-              <ShieldCheck className="w-3.5 h-3.5 text-plum-300" />
-              <span>Standar Kode Etik HIMPSI &amp; Psikolog Berlisensi SIPP</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-0 sm:h-9 flex flex-col sm:flex-row items-center justify-between gap-y-1 sm:gap-y-0 text-[11px] tracking-normal">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1.5 font-medium text-plum-100">
+              <ShieldCheck className="w-3.5 h-3.5 text-plum-300 shrink-0" />
+              <span>{topBar.code_of_ethics}</span>
             </span>
-            <span className="text-white/20">|</span>
-            <span className="inline-flex items-center gap-1.5 text-emerald-300 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Sesi Daring (Google Meet) &amp; Tatap Muka Pondok Bambu Aktif</span>
+            <span className="hidden md:inline text-plum-400/50 font-light" aria-hidden="true">|</span>
+            <span className="inline-flex items-center gap-1.5 text-plum-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              <span>{topBar.service_session}</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-plum-200/90">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="w-3 h-3 text-plum-300" />
-              <span>Senin – Sabtu (By Appointment)</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 text-plum-200">
+            <span className="inline-flex items-center gap-1.5 text-plum-300">
+              <Clock className="w-3 h-3 text-plum-400 shrink-0" />
+              <span>{topBar.schedule}</span>
             </span>
-            <span className="text-white/20">|</span>
+            <span className="hidden sm:inline text-plum-400/50 font-light" aria-hidden="true">|</span>
             <a
-              href="tel:119"
-              className="inline-flex items-center gap-1 text-champagne-200 hover:text-white font-semibold transition-colors"
+              href={`tel:${topBar.crisis_phone || '119'}`}
+              className="inline-flex items-center gap-1.5 text-champagne-200 hover:text-white font-medium transition-colors"
             >
-              <Phone className="w-3 h-3 text-champagne-500" />
-              <span>Hotline Krisis: 119 ext 8</span>
+              <Phone className="w-3 h-3 text-champagne-400 shrink-0" />
+              <span>Hotline Krisis: <strong className="font-semibold text-white tracking-wide">{topBar.crisis_hotline}</strong></span>
             </a>
           </div>
         </div>
@@ -108,18 +164,19 @@ export const Header: React.FC = () => {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-19 flex items-center justify-between gap-4">
-          {/* Brand Logo + Editorial Lockup */}
+          {/* Brand Logo + Editorial Lockup (Borderless, seamless integration) */}
           <Link
             to="/"
-            className="flex items-center gap-3 py-1 group focus:outline-hidden focus:ring-2 focus:ring-plum-600/40 rounded-2xl"
+            className="flex items-center gap-3 py-1 group focus:outline-hidden focus:ring-2 focus:ring-plum-600/40 rounded-xl"
             aria-label="Beranda Soulaide"
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={(e) => handleNavClick('/#', e)}
           >
-            <div className="relative flex items-center justify-center p-1.5 rounded-2xl bg-gradient-to-br from-plum-50 via-white to-plum-100/60 border border-plum-200/70 shadow-2xs group-hover:border-plum-300 group-hover:shadow-sm transition-all">
+            <div className="relative flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
               <img
-                src="/Soulaide Psi Arc Logo.png"
+                src={hero.logo_image || getAssetUrl('/Soulaide Psi Arc Logo.webp')}
                 alt="Soulaide Psychology"
-                className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                onError={handleImageFallback}
+                className="h-10 sm:h-11 w-auto object-contain"
               />
             </div>
             <div className="flex flex-col leading-none">
@@ -127,7 +184,7 @@ export const Header: React.FC = () => {
                 <span className="font-serif text-xl font-bold tracking-tight text-plum-900">
                   Soulaide
                 </span>
-                <span className="hidden xl:inline-flex items-center px-1.5 py-0.5 rounded-md bg-plum-50 border border-plum-200/60 text-[9px] font-bold text-plum-700 uppercase tracking-wider">
+                <span className="hidden xl:inline-flex items-center px-1.5 py-0.5 rounded-sm bg-plum-50 border border-plum-200/60 text-[9px] font-bold text-plum-700 uppercase tracking-wider">
                   Psi
                 </span>
               </div>
@@ -137,30 +194,29 @@ export const Header: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop Capsule Navigation */}
+          {/* Desktop Navigation */}
           <nav
-            className="hidden md:flex items-center gap-1 p-1.5 rounded-full bg-[#FAF8F5]/90 border border-[#E5DDD5] shadow-[inset_0_1px_2px_rgba(41,23,56,0.04)]"
+            className="hidden md:flex items-center gap-1 p-1 rounded-full bg-[#FAF8F5]/90 border border-[#E5DDD5] shadow-[inset_0_1px_2px_rgba(41,23,56,0.04)]"
             aria-label="Navigasi Utama"
           >
             {navLinks.map((link) => {
-              const isActive =
-                link.to === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(link.to)
+              const isActive = isLinkActive(link.to)
+
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`relative px-4 py-1.5 rounded-full text-sm transition-all duration-200 flex items-center gap-1.5 ${
+                  onClick={(e) => handleNavClick(link.to, e)}
+                  className={`relative px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 ${
                     isActive
-                      ? 'bg-gradient-to-r from-plum-800 to-plum-700 text-white font-semibold shadow-[0_2px_10px_-2px_rgba(73,46,95,0.45)]'
-                      : 'text-[#4B3F59] hover:text-plum-800 hover:bg-white/80 font-medium'
+                      ? 'bg-plum-900 text-white shadow-xs'
+                      : 'text-[#4B3F59] hover:text-plum-900 hover:bg-white/80'
                   }`}
                 >
                   <span>{link.label}</span>
                   {link.badge && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold leading-tight ${
+                      className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold leading-tight ${
                         isActive
                           ? 'bg-white/20 text-white'
                           : 'bg-plum-100 text-plum-700'
@@ -235,7 +291,7 @@ export const Header: React.FC = () => {
           <div className="flex md:hidden items-center gap-2">
             <Link to="/booking">
               <Button size="sm" className="rounded-full bg-plum-700 text-white text-xs px-3.5 h-9 gap-1">
-                <Sparkles className="w-3 h-3 text-plum-200" />
+                <Calendar className="w-3 h-3 text-plum-200" />
                 <span>Booking</span>
               </Button>
             </Link>
@@ -257,18 +313,16 @@ export const Header: React.FC = () => {
         <div className="md:hidden border-b border-[#EAE3DC] bg-white/98 backdrop-blur-xl px-4 pt-4 pb-6 space-y-4 shadow-2xl">
           <nav className="flex flex-col space-y-1" aria-label="Navigasi Mobile">
             {navLinks.map((link) => {
-              const isActive =
-                link.to === '/'
-                  ? location.pathname === '/'
-                  : location.pathname.startsWith(link.to)
+              const isActive = isLinkActive(link.to)
+
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-4 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-between ${
+                  onClick={(e) => handleNavClick(link.to, e)}
+                  className={`px-4 py-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-between ${
                     isActive
-                      ? 'bg-plum-50 text-plum-800 border border-plum-200/70'
+                      ? 'bg-plum-50 text-plum-900 border border-plum-200'
                       : 'text-[#4B3F59] hover:bg-sanctuary-100'
                   }`}
                 >

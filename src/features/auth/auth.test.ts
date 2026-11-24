@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { UserRole } from '@/types/index.ts'
+import { getRoleDashboardPath } from './auth-context.ts'
 
 function checkRoleAccess(userRole: UserRole | null, allowedRoles: UserRole[]): boolean {
   if (!userRole) return false
@@ -48,5 +49,22 @@ describe('Password and Input Validation Rules', () => {
     const doPasswordsMatch = (p1: string, p2: string) => p1 === p2
     expect(doPasswordsMatch('secret123', 'secret123')).toBe(true)
     expect(doPasswordsMatch('secret123', 'different')).toBe(false)
+  })
+})
+
+describe('Role Dashboard Routing Path', () => {
+  it('maps super_admin and admin to /admin', () => {
+    expect(getRoleDashboardPath('super_admin')).toBe('/admin')
+    expect(getRoleDashboardPath('admin')).toBe('/admin')
+  })
+
+  it('maps psychologist to /psychologist', () => {
+    expect(getRoleDashboardPath('psychologist')).toBe('/psychologist')
+  })
+
+  it('maps customer to /dashboard', () => {
+    expect(getRoleDashboardPath('customer')).toBe('/dashboard')
+    expect(getRoleDashboardPath(null)).toBe('/dashboard')
+    expect(getRoleDashboardPath(undefined)).toBe('/dashboard')
   })
 })

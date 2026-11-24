@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client.ts'
 import type { ServiceDetail, DeliveryMethod } from '@/types/index.ts'
 
@@ -47,8 +47,30 @@ export const fallbackServices: ServiceDetail[] = [
   },
 ]
 
+export interface UpdateServiceInput {
+  id: string
+  title?: string
+  description?: string
+  durationMinutes?: number
+  priceOnline?: number | null
+  priceOffline?: number | null
+  deliveryMethods?: DeliveryMethod[]
+  isActive?: boolean
+}
+
+export interface CreateServiceInput {
+  title: string
+  description: string
+  durationMinutes: number
+  priceOnline?: number | null
+  priceOffline?: number | null
+  deliveryMethods: DeliveryMethod[]
+}
+
 export function useServices() {
-  return useQuery<ServiceDetail[]>({
+  const queryClient = useQueryClient()
+
+  const query = useQuery<ServiceDetail[]>({
     queryKey: ['soulaide-services'],
     queryFn: async () => {
       try {
@@ -80,6 +102,8 @@ export function useServices() {
           method:
             item.delivery_methods?.length === 1 && item.delivery_methods[0] === 'online'
               ? 'Daring (Online via Google Meet)'
+              : item.delivery_methods?.length === 1 && item.delivery_methods[0] === 'offline'
+              ? 'Tatap Muka (Offline di Pondok Bambu)'
               : 'Online & Tatap Muka (Offline)',
           price: item.price_online ?? item.price_offline ?? null,
           priceOnline: item.price_online,
@@ -94,4 +118,123 @@ export function useServices() {
     },
     initialData: fallbackServices,
   })
+
+  const updatePriceMutation = useMutation({
+    mutationFn: async ({ id, price }: { id: string; price: number }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_services') as any)
+        .update({
+          price_online: price,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+
+      if (error) {
+        throw new Error(`Gagal memperbarui tarif layanan: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-services'] })
+    },
+  })
+
+  const updateServiceMutation = useMutation({
+    mutationFn: async (input: UpdateServiceInput) => {
+      const updatePayload: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+
+      if (input.title !== undefined) {
+        updatePayload.name = input.title
+        updatePayload.slug = input.title.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-')
+      }
+      if (input.description !== undefined) {
+        updatePayload.description = input.description
+      }
+      if (input.durationMinutes !== undefined) {
+        updatePayload.duration_minutes = input.durationMinutes
+      }
+      if (input.priceOnline !== undefined) {
+        updatePayload.price_online = input.priceOnline
+      }
+      if (input.priceOffline !== undefined) {
+        updatePayload.price_offline = input.priceOffline
+      }
+      if (input.deliveryMethods !== undefined) {
+        updatePayload.delivery_methods = input.deliveryMethods
+      }
+      if (input.isActive !== undefined) {
+        updatePayload.is_active = input.isActive
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_services') as any)
+        .update(updatePayload)
+        .eq('id', input.id)
+
+      if (error) {
+        throw new Error(`Gagal memperbarui layanan: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-services'] })
+    },
+  })
+
+  const createServiceMutation = useMutation({
+    mutationFn: async (input: CreateServiceInput) => {
+      const slug = input.title.toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-')
+      // Default to the first service category
+      const categoryId = 'c1000000-0000-0000-0000-000000000001'
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_services') as any).insert({
+        category_id: categoryId,
+        name: input.title,
+        slug,
+        description: input.description,
+        duration_minutes: input.durationMinutes,
+        delivery_methods: input.deliveryMethods,
+        price_online: input.priceOnline ?? null,
+        price_offline: input.priceOffline ?? null,
+        is_active: true,
+      })
+
+      if (error) {
+        throw new Error(`Gagal menambahkan layanan baru: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-services'] })
+    },
+  })
+
+  const deleteServiceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Soft-delete by setting is_active = false
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('Soulaide_services') as any)
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) {
+        throw new Error(`Gagal menonaktifkan layanan: ${error.message}`)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['soulaide-services'] })
+    },
+  })
+
+  return {
+    ...query,
+    updatePrice: updatePriceMutation.mutateAsync,
+    isUpdatingPrice: updatePriceMutation.isPending,
+    updateService: updateServiceMutation.mutateAsync,
+    isUpdatingService: updateServiceMutation.isPending,
+    createService: createServiceMutation.mutateAsync,
+    isCreatingService: createServiceMutation.isPending,
+    deleteService: deleteServiceMutation.mutateAsync,
+    isDeletingService: deleteServiceMutation.isPending,
+  }
 }

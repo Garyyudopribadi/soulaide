@@ -4,19 +4,17 @@ import {
   HeartHandshake,
   ShieldCheck,
   Calendar,
-  Sparkles,
   MessageCircle,
   Clock,
   ArrowRight,
   ArrowUpRight,
   Users,
   CheckCircle2,
-  Award,
   Video,
   MapPin,
-  Lock,
   Compass,
   Play,
+  BookOpen,
   SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button.tsx'
@@ -24,8 +22,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge.tsx'
 import { usePsychologists } from '@/features/psychologists/usePsychologists.ts'
 import { useServices } from '@/features/services/useServices.ts'
-import { formatIDR } from '@/lib/utils.ts'
+import { formatIDR, getAssetUrl, handleImageFallback } from '@/lib/utils.ts'
+import { isYouTubeUrl, parseYouTubeEmbedUrl } from '@/lib/storageManager.ts'
+import { useLandingContent } from './useLandingContent.ts'
 import type { DeliveryMethod, ProfessionalTier } from '@/types/index.ts'
+import { FaqSection } from './FaqSection.tsx'
+import { ContactSection } from './ContactSection.tsx'
 
 const LOOPING_PHRASES = [
   {
@@ -55,13 +57,15 @@ const JOURNEY_STEPS = [
     description:
       'Tentukan kebutuhan Anda — Konseling Individu, MHCU, atau Bundling MHCU+Konseling Individu Online — lalu pilih pendamping Soul Guidance atau Soul Expert.',
     icon: Compass,
+    detail: '3 format layanan resmi, 4 psikolog terverifikasi SIPP',
   },
   {
     step: '02',
     title: 'Atur Jadwal & Metode Sesi',
     description:
-      'Pilih sesi Daring (Google Meet) atau Tatap Muka di Pondok Bambu sesuai waktu nyaman Anda dengan lead time 24 jam.',
+      'Pilih sesi Daring (Google Meet) atau Tatap Muka di Pondok Bambu sesuai waktu nyaman Anda dengan lead time minimal 24 jam.',
     icon: Calendar,
+    detail: 'Kalender sinkron, konfirmasi jadwal langsung',
   },
   {
     step: '03',
@@ -69,78 +73,168 @@ const JOURNEY_STEPS = [
     description:
       'Konfirmasi pembayaran transparan, terima tautan ruang sesi aman, dan jalani proses pendampingan berstandar Kode Etik HIMPSI.',
     icon: HeartHandshake,
+    detail: 'Kerahasiaan medis terjamin & terlindungi',
   },
 ] as const
+
+const CLINICAL_DOMAINS = [
+  {
+    id: 'emotion',
+    category: 'Domain 01',
+    title: 'Emosi & Regulasi Diri',
+    subtitle: 'Mengenal, mengurai, dan mengelola dinamika perasaan harian.',
+    icon: HeartHandshake,
+    topics: [
+      { name: 'Overthinking & kecemasan berlebih', note: 'Kerap mengantisipasi skenario terburuk' },
+      { name: 'Stres berkepanjangan & burnout', note: 'Kelelahan emosional yang menguras energi' },
+      { name: 'Regulasi emosi & mood swing', note: 'Kesulitan menstabilkan respons emosi' },
+      { name: 'Mengenal diri & self-acceptance', note: 'Menerima kerentanan tanpa menghakimi' },
+      { name: 'Self-esteem & kepercayaan diri', note: 'Membangun nilai diri yang lebih sehat' },
+    ],
+  },
+  {
+    id: 'life-path',
+    category: 'Domain 02',
+    title: 'Fase Hidup & Arah Karier',
+    subtitle: 'Navigasi transisi hidup, tuntutan peran, dan tujuan masa depan.',
+    icon: Compass,
+    topics: [
+      { name: 'Quarter-life crisis & arah hidup', note: 'Keraguan arah karier dan pilihan masa depan' },
+      { name: 'Tekanan pekerjaan & akademik', note: 'Beban target dan ekspektasi lingkungan' },
+      { name: 'Membangun kebiasaan adaptif', note: 'Mengubah pola maladaptif secara bertahap' },
+      { name: 'Penataan tujuan hidup (life goals)', note: 'Menentukan prioritas realistis & bermakna' },
+      { name: 'Caregiver burnout & adaptasi', note: 'Kelelahan merawat anggota keluarga / anak' },
+    ],
+  },
+  {
+    id: 'relationship',
+    category: 'Domain 03',
+    title: 'Relasi, Pasangan & Keluarga',
+    subtitle: 'Menata batasan sehat, komunikasi asertif, dan dinamika interpersonal.',
+    icon: Users,
+    topics: [
+      { name: 'Dinamika pasangan & pernikahan', note: 'Konflik komunikasi dan perbedaan prinsip' },
+      { name: 'Toxic relationship & pemulihan', note: 'Melepaskan pola hubungan manipulatif' },
+      { name: 'Boundaries (batasan sehat)', note: 'Belajar berkata tidak tanpa rasa bersalah' },
+      { name: 'Trust issue & hambatan intimasi', note: 'Trauma masa lalu yang memengaruhi relasi' },
+      { name: 'Parenting & kebutuhan khusus', note: 'Pola asuh suportif dan inklusi anak' },
+    ],
+  },
+] as const
+
+const getServiceFeatures = (title: string): string[] => {
+  const lower = title.toLowerCase()
+  if (lower.includes('bundl')) {
+    return [
+      'Asesmen MHCU komprehensif',
+      'Sesi penyampaian hasil (30 menit)',
+      'Sesi konseling individu daring (60 menit)',
+    ]
+  }
+  if (lower.includes('mhcu')) {
+    return [
+      'Asesmen kondisi psikologis terstruktur',
+      'Sesi pembahasan awal (30 menit)',
+      'Laporan analisis klinis dalam 2 minggu',
+    ]
+  }
+  return [
+    'Sesi konseling 1-on-1 (60 menit)',
+    'Daring atau tatap muka Pondok Bambu',
+    'Pendamping Soul Guidance atau Soul Expert',
+  ]
+}
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate()
   const { data: psychologists } = usePsychologists()
   const { data: services } = useServices()
+  const { data: landingContent } = useLandingContent()
+  const heroData = landingContent.hero
+  const philosophyData = landingContent.philosophy
+  const journeyData = landingContent.journey
+  const loopingPhrases = heroData.looping_phrases?.length ? heroData.looping_phrases : LOOPING_PHRASES
+  const journeySteps = journeyData?.steps?.length ? journeyData.steps : JOURNEY_STEPS
+  const philosophyPillars = philosophyData?.pillars?.length ? philosophyData.pillars : [
+    {
+      tag: '01 · Soul',
+      title: 'Ruang Jiwa Empatik',
+      description: 'Menghargai keunikan emosi, cerita hidup, dan kerentanan Anda dengan penerimaan utuh.',
+    },
+    {
+      tag: '02 · Aide',
+      title: 'Pendampingan Aktif',
+      description: 'Berjalan bersama Anda menemukan regulasi emosi dan langkah pemulihan yang aplikatif.',
+    },
+    {
+      tag: '03 · Psi (Ψ)',
+      title: 'Keilmuan & Etika',
+      description: 'Intervensi berbasis bukti ilmiah (CBT, SFBT, Humanistik, ABA) sesuai Kode Etik HIMPSI.',
+    },
+  ]
+
   const [activePhraseIndex, setActivePhraseIndex] = useState(0)
   const [showMotionVideoModal, setShowMotionVideoModal] = useState(false)
   const [showcaseTier, setShowcaseTier] = useState<ProfessionalTier>('Soul Guidance')
   const [activeBrochureImg, setActiveBrochureImg] = useState<string | null>(null)
+  const [activeTopicTab, setActiveTopicTab] = useState<string>('emotion')
 
-  // Quick Concierge Finder States inside Hero Header
+  // Quick Session Concierge Simulation State
   const [quickTier, setQuickTier] = useState<ProfessionalTier>('Soul Guidance')
   const [quickMethod, setQuickMethod] = useState<DeliveryMethod>('online')
   const [quickServiceId, setQuickServiceId] = useState<string>('')
 
-  const activeQuickService =
-    services.find((s) => s.id === quickServiceId) || services[0]
+  const activeQuickService = services.find((s) => s.id === quickServiceId) || services[0]
 
   const getQuickEstimate = (): number => {
     if (!activeQuickService) return 110000
+    const lower = activeQuickService.title.toLowerCase()
     const isExpert = quickTier === 'Soul Expert'
     const isOffline = quickMethod === 'offline'
-    const lower = activeQuickService.title.toLowerCase()
 
-    if (lower.includes('individual')) {
-      return isExpert ? (isOffline ? 500000 : 250000) : isOffline ? 350000 : 110000
+    if (lower.includes('bundl')) {
+      return isExpert ? 329000 : 169000
     }
     if (lower.includes('mhcu')) {
       return isExpert ? (isOffline ? 300000 : 179000) : isOffline ? 200000 : 89000
     }
-    if (lower.includes('bundle')) {
-      return isExpert ? (isOffline ? 650000 : 329000) : isOffline ? 450000 : 169000
-    }
-    return activeQuickService.priceOnline || 110000
+    return isExpert ? (isOffline ? 500000 : 250000) : isOffline ? 350000 : 110000
   }
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setActivePhraseIndex((prev) => (prev + 1) % LOOPING_PHRASES.length)
+      setActivePhraseIndex((prev) => (prev + 1) % loopingPhrases.length)
     }, 4200)
     return () => clearInterval(timer)
-  }, [])
+  }, [loopingPhrases.length])
 
   const getPresencePill = (presence: string) => {
     switch (presence) {
       case 'available':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm border border-emerald-200/80 text-emerald-800 text-[10px] font-semibold shadow-xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-[#EDF3EC] px-2 py-0.5 text-[10px] font-semibold text-[#33492F]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#4F6B48]" />
             Tersedia Sesi
           </span>
         )
       case 'online':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm border border-plum-200 text-plum-800 text-[10px] font-semibold shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-plum-50 px-2 py-0.5 text-[10px] font-semibold text-plum-800">
             <span className="w-1.5 h-1.5 rounded-full bg-plum-500" />
             Online
           </span>
         )
       case 'busy':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-sm border border-champagne-200 text-champagne-700 text-[10px] font-semibold shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-champagne-50 px-2 py-0.5 text-[10px] font-semibold text-champagne-700">
             <span className="w-1.5 h-1.5 rounded-full bg-champagne-500" />
             Sedang Sesi
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-[#E5DDD5] text-[#645A70] text-[10px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#9D94A8]" />
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-[#F0EBE2] px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#9A8F84]" />
             Offline
           </span>
         )
@@ -151,16 +245,9 @@ export const LandingPage: React.FC = () => {
     <div className="pb-20">
       {/* =====================================================================
           ENHANCED BERANDA HERO HEADER — Iconic Soulaide Orbital Psi Arc &
-          Kinetic Looping Header Experience
+          Kinetic Looping Header Experience (STRICTLY PRESERVED)
          ===================================================================== */}
-      <section className="relative w-full overflow-hidden border-b border-[#E5DDD4] soulaide-hero-mesh pt-8 sm:pt-12 lg:pt-16 pb-14 sm:pb-20">
-        {/* Soft Atmospheric Aurora Glows */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-          <div className="absolute -top-28 -left-20 w-[34rem] h-[34rem] rounded-full bg-plum-300/30 blur-3xl animate-breathe" />
-          <div className="absolute top-1/4 right-0 w-[30rem] h-[30rem] rounded-full bg-[#5D728F]/12 blur-3xl animate-breathe-delayed" />
-          <div className="absolute -bottom-24 left-1/4 w-[28rem] h-[20rem] rounded-full bg-plum-200/35 blur-3xl" />
-        </div>
-
+      <section className="relative w-full overflow-hidden border-b border-line soulaide-hero-mesh pt-8 sm:pt-12 lg:pt-16 pb-14 sm:pb-20">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 lg:space-y-14">
           {/* MAIN 2-COLUMN EDITORIAL HERO STAGE */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
@@ -216,16 +303,17 @@ export const LandingPage: React.FC = () => {
                 {/* Inner Soft Halo Ring 1 */}
                 <div className="absolute w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-gradient-to-br from-white/95 via-white/80 to-plum-50/75 border border-white shadow-[0_24px_60px_-18px_rgba(73,46,95,0.22),inset_0_1px_4px_rgba(255,255,255,0.9)] backdrop-blur-md flex items-center justify-center p-7 sm:p-8">
                   <img
-                    src="/Soulaide Psi Arc Logo.png"
+                    src={heroData.logo_image || getAssetUrl('/Soulaide Psi Arc Logo.webp')}
                     alt="Soulaide Psi Arc Logo"
+                    onError={handleImageFallback}
                     className="w-full h-full object-contain select-none drop-shadow-[0_8px_18px_rgba(73,46,95,0.14)] transition-transform duration-500 hover:scale-105"
                   />
                 </div>
 
                 {/* Floating Glass Chip 1 (Top Right): Live Psychologists Avatar Stack */}
                 <Link
-                  to="/psychologists"
-                  className="absolute -top-2 -right-2 sm:top-2 sm:-right-4 z-20 flex items-center gap-2.5 pl-2.5 pr-3.5 py-2 rounded-2xl bg-white/92 backdrop-blur-xl border border-white/90 shadow-[0_14px_32px_-10px_rgba(41,23,56,0.18)] hover:border-plum-300 transition-all animate-float-gentle group"
+                  to="/#psikolog"
+                  className="absolute -top-2 -right-2 sm:top-2 sm:-right-4 z-20 flex items-center gap-2.5 pl-2.5 pr-3.5 py-2 rounded-md bg-paper-card border border-line shadow-[0_10px_24px_-14px_rgba(33,27,36,0.28)] hover:border-plum-300 transition-colors animate-float-gentle group"
                 >
                   <div className="flex -space-x-2 overflow-hidden">
                     {psychologists.slice(0, 4).map((p) => (
@@ -233,45 +321,46 @@ export const LandingPage: React.FC = () => {
                         key={p.id}
                         src={p.profileImage || p.cardImage}
                         alt={p.fullName}
-                        className="inline-block h-7 w-7 rounded-full ring-2 ring-white object-cover object-top bg-plum-100"
+                        onError={handleImageFallback}
+                        className="inline-block h-7 w-7 rounded-full ring-2 ring-[#FCF9F3] object-cover object-top bg-plum-100"
                       />
                     ))}
                   </div>
                   <div className="text-left leading-tight">
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-[#1E1429] group-hover:text-plum-700">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-ink group-hover:text-plum-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" />
                       <span>4 Psikolog Klinis</span>
                     </div>
-                    <span className="text-[10px] text-[#5D728F] font-medium">
+                    <span className="text-[10px] text-ink-muted font-medium">
                       Soul Expert &amp; Guidance
                     </span>
                   </div>
                 </Link>
 
                 {/* Floating Glass Chip 2 (Bottom Left): Ethical & SIPP Verification */}
-                <div className="absolute -bottom-2 -left-2 sm:bottom-3 sm:-left-4 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-white/92 backdrop-blur-xl border border-white/90 shadow-[0_14px_32px_-10px_rgba(41,23,56,0.18)] animate-float-gentle-delayed">
-                  <div className="w-8 h-8 rounded-xl bg-plum-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <div className="absolute -bottom-2 -left-2 sm:bottom-3 sm:-left-4 z-20 flex items-center gap-2.5 px-3.5 py-2 rounded-md bg-paper-card border border-line shadow-[0_10px_24px_-14px_rgba(33,27,36,0.28)] animate-float-gentle-delayed">
+                  <div className="w-8 h-8 rounded-md bg-plum-900 text-[#FBF7F0] flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-4 h-4 text-plum-100" />
                   </div>
                   <div className="text-left leading-tight">
-                    <div className="text-[11px] font-bold text-[#1E1429]">
+                    <div className="text-[11px] font-bold text-ink">
                       100% Privasi Terjaga
                     </div>
-                    <span className="text-[10px] text-[#5D728F] font-medium">
+                    <span className="text-[10px] text-ink-muted font-medium">
                       Kode Etik HIMPSI &amp; SIPP
                     </span>
                   </div>
                 </div>
 
-                {/* Floating Motion Loop Preview Button (Bottom Right) */}
+                {/* Floating Video Preview Button (Bottom Right) */}
                 <button
                   type="button"
                   onClick={() => setShowMotionVideoModal(true)}
-                  className="absolute bottom-1 right-1 sm:bottom-4 sm:right-2 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-plum-900/90 hover:bg-plum-800 text-white text-[10px] font-semibold shadow-md backdrop-blur-md transition-all cursor-pointer hover:scale-105"
-                  title="Putar video Looping Header Soulaide"
+                  className="absolute bottom-1 right-1 sm:bottom-4 sm:right-2 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-plum-900/95 hover:bg-plum-800 text-[#FBF7F0] text-[10px] font-semibold backdrop-blur-md transition-colors cursor-pointer"
+                  title="Putar video Soulaide"
                 >
                   <Play className="w-2.5 h-2.5 fill-plum-200 text-plum-200" />
-                  <span>Motion Intro</span>
+                  <span>Video</span>
                 </button>
               </div>
             </div>
@@ -279,33 +368,32 @@ export const LandingPage: React.FC = () => {
             {/* RIGHT COLUMN (7 cols): Editorial Headline, Looping Value Stage & CTAs */}
             <div className="lg:col-span-7 text-center lg:text-left space-y-6">
               {/* Top Eyebrow Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-plum-200/80 text-plum-800 text-xs font-semibold shadow-2xs backdrop-blur-sm">
-                <Sparkles className="w-3.5 h-3.5 text-plum-600" />
-                <span>Layanan Konseling Psikologi Profesional • Online &amp; Pondok Bambu</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm bg-paper-card border border-line text-plum-800 text-[11px] font-semibold uppercase tracking-[0.08em]">
+                <ShieldCheck className="w-3.5 h-3.5 text-plum-600" />
+                <span>Layanan Konseling Psikologi • Online &amp; Pondok Bambu</span>
               </div>
 
               {/* Canonical 2-Line Headline from Soulaide Looping Header */}
               <div className="space-y-2">
-                <h1 className="text-4xl sm:text-5xl xl:text-[3.65rem] font-extrabold text-plum-800 tracking-tight leading-[1.1]">
-                  Counseling Psychology,
-                  <span className="block mt-1 text-[#23192D]">
-                    made for{' '}
-                    <span className="font-serif italic font-semibold text-transparent bg-clip-text bg-gradient-to-r from-plum-700 via-plum-500 to-[#5D728F]">
-                      you.
+                <h1 className="text-4xl sm:text-5xl xl:text-[3.65rem] font-extrabold text-plum-900 tracking-tight leading-[1.05]">
+                  {heroData.heading_primary}
+                  <span className="block mt-1 text-ink">
+                    <span className="font-serif italic font-normal text-plum-700">
+                      {heroData.heading_accent}
                     </span>
                   </span>
                 </h1>
               </div>
 
               {/* Kinetic Looping Phrase Showcase Card */}
-              <div className="relative rounded-3xl bg-white/88 backdrop-blur-xl border border-white/90 p-5 sm:p-6 shadow-[0_18px_45px_-20px_rgba(73,46,95,0.18)]">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-[#EFE9E3]">
-                  <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#5D728F]">
-                    <span className="w-2 h-2 rounded-full bg-plum-600" />
-                    {LOOPING_PHRASES[activePhraseIndex].tag}
+              <div className="relative rounded-lg bg-paper-card border border-line p-5 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-[#EDE6D9]">
+                  <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-plum-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-plum-600" />
+                    {loopingPhrases[activePhraseIndex]?.tag}
                   </span>
-                  <span className="text-[11px] font-mono font-semibold text-plum-500">
-                    {LOOPING_PHRASES[activePhraseIndex].step} / 03
+                  <span className="text-[11px] font-mono font-semibold text-ink-muted">
+                    {loopingPhrases[activePhraseIndex]?.step} / 03
                   </span>
                 </div>
 
@@ -313,51 +401,51 @@ export const LandingPage: React.FC = () => {
                 <div className="min-h-[4.25rem] flex flex-col justify-center">
                   <p
                     key={`hero-phrase-${activePhraseIndex}`}
-                    className="text-xl sm:text-2xl md:text-[1.7rem] font-semibold text-[#5D728F] tracking-tight leading-snug animate-phrase-enter"
+                    className="text-xl sm:text-2xl md:text-[1.7rem] font-serif font-normal text-plum-800 tracking-normal leading-snug animate-phrase-enter"
                   >
-                    {LOOPING_PHRASES[activePhraseIndex].text}
+                    {loopingPhrases[activePhraseIndex]?.text}
                   </p>
                   <p
                     key={`hero-sub-${activePhraseIndex}`}
-                    className="text-xs sm:text-sm text-[#645A70] mt-1.5 animate-phrase-enter"
+                    className="text-xs sm:text-sm text-ink-muted mt-1.5 animate-phrase-enter"
                   >
-                    {LOOPING_PHRASES[activePhraseIndex].sub}
+                    {loopingPhrases[activePhraseIndex]?.sub}
                   </p>
                 </div>
 
                 {/* Interactive 3-Segment Timeline Selector */}
-                <div className="mt-5 grid grid-cols-3 gap-2.5">
-                  {LOOPING_PHRASES.map((item, idx) => {
+                <div className="mt-5 grid grid-cols-3 gap-2">
+                  {loopingPhrases.map((item, idx) => {
                     const isActive = idx === activePhraseIndex
                     return (
                       <button
                         key={item.text}
                         type="button"
                         onClick={() => setActivePhraseIndex(idx)}
-                        className={`group text-left p-2.5 rounded-2xl border transition-all cursor-pointer ${
+                        className={`group text-left p-2.5 rounded-md border transition-colors cursor-pointer ${
                           isActive
-                            ? 'bg-plum-50/90 border-plum-300 shadow-2xs'
-                            : 'bg-sanctuary-100/70 border-transparent hover:border-[#E5DDD5] hover:bg-white'
+                            ? 'bg-plum-50 border-plum-300'
+                            : 'bg-transparent border-transparent hover:border-line hover:bg-paper'
                         }`}
                       >
                         {/* Segment Progress Line */}
-                        <div className="h-1 w-full rounded-full bg-plum-100 overflow-hidden mb-2">
+                        <div className="h-0.5 w-full rounded-full bg-plum-200 overflow-hidden mb-2">
                           {isActive && (
                             <div
                               key={`seg-bar-${activePhraseIndex}`}
-                              className="h-full bg-gradient-to-r from-plum-700 to-plum-400 animate-progress-bar"
+                              className="h-full bg-plum-700 animate-progress-bar"
                             />
                           )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <CheckCircle2
                             className={`w-3.5 h-3.5 shrink-0 ${
-                              isActive ? 'text-plum-700' : 'text-[#9B8FB0]'
+                              isActive ? 'text-plum-700' : 'text-ink-muted'
                             }`}
                           />
                           <span
                             className={`text-[11px] font-semibold truncate ${
-                              isActive ? 'text-plum-900' : 'text-[#645A70]'
+                              isActive ? 'text-plum-900' : 'text-ink-muted'
                             }`}
                           >
                             {item.text}
@@ -370,193 +458,188 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Clinical Narrative */}
-              <p className="text-sm sm:text-base text-[#4F455B] leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-sm sm:text-base text-ink-soft leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 Soulaide mendampingi perjalanan kesehatan mental Anda secara aman, rahasia, dan tanpa penghakiman. Pilih pendampingan dari{' '}
                 <strong className="text-plum-900 font-semibold">Soul Guidance</strong> atau{' '}
                 <strong className="text-plum-900 font-semibold">Soul Expert</strong>, tersedia sesi daring (Google Meet) maupun tatap muka di Pondok Bambu, Jakarta Timur.
               </p>
 
               {/* Primary & Secondary Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-1">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-1">
                 <Link to="/booking">
                   <Button
                     size="lg"
-                    className="gap-2.5 h-13 px-7 rounded-full bg-gradient-to-r from-plum-800 via-plum-700 to-plum-600 hover:from-plum-900 hover:to-plum-700 text-white font-semibold shadow-[0_10px_28px_-6px_rgba(73,46,95,0.5)]"
+                    className="gap-2.5 h-12 px-6 rounded-md bg-plum-900 hover:bg-plum-800 text-[#FBF7F0] font-semibold"
                   >
-                    <Calendar className="w-4.5 h-4.5 text-plum-200" />
+                    <Calendar className="w-4 h-4 text-plum-200" />
                     <span>Jadwalkan Konseling</span>
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
-                <Link to="/psychologists">
+                <a href="#psikolog">
                   <Button
                     variant="outline"
                     size="lg"
-                    className="gap-2 h-13 px-6 rounded-full border-[#DDD4CA] bg-white/95 hover:bg-white hover:border-plum-300 text-[#2E223A]"
+                    className="gap-2 h-12 px-5 rounded-md"
                   >
                     <Users className="w-4 h-4 text-plum-600" />
                     <span>Kenali Psikolog Kami</span>
                   </Button>
-                </Link>
-                <Link to="/services">
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    className="gap-1.5 h-13 px-5 rounded-full text-plum-800 hover:bg-white/70 font-semibold"
-                  >
-                    <span>Lihat 3 Layanan</span>
-                    <ArrowUpRight className="w-4 h-4" />
-                  </Button>
-                </Link>
+                </a>
+                <a
+                  href="#layanan"
+                  className="inline-flex h-12 items-center gap-1.5 px-3 text-sm font-semibold text-plum-800 underline decoration-plum-300 underline-offset-4 hover:text-plum-900"
+                >
+                  <span>Lihat 3 layanan</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </a>
               </div>
             </div>
           </div>
 
           {/* =================================================================
-              QUICK SESSION CONCIERGE DOCK — Interactive Instant Finder Bar
+              INTERACTIVE QUICK SESSION CONCIERGE DOCK (Simulasi & Reservasi Cepat)
+              Previous Horizontal Layout Harmonized with Anti-AI-Slop Styling
              ================================================================= */}
-          <div className="rounded-3xl bg-white/92 backdrop-blur-xl border border-white shadow-[0_20px_50px_-20px_rgba(41,23,56,0.16)] p-4 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-              {/* Dock Label */}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-plum-50 border border-plum-100 text-plum-700 flex items-center justify-center shrink-0">
-                  <SlidersHorizontal className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-plum-700">
-                    Simulasi &amp; Reservasi Cepat
+          <div className="pt-2">
+            <div className="rounded-xl bg-paper-card border border-line shadow-[0_12px_32px_-16px_rgba(41,23,56,0.12)] p-4 sm:p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                {/* Dock Label */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-plum-50 border border-plum-100 text-plum-700 flex items-center justify-center shrink-0">
+                    <SlidersHorizontal className="w-4.5 h-4.5" />
                   </div>
-                  <p className="text-xs text-[#645A70]">
-                    Sesuaikan kategori pendamping dan metode sesi Anda
-                  </p>
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-plum-700">
+                      Simulasi &amp; Reservasi Cepat
+                    </div>
+                    <p className="text-xs text-[#645A70]">
+                      Sesuaikan kategori pendamping dan metode sesi Anda
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Interactive Controls */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 max-w-3xl">
-                {/* 1. Tier Selector */}
-                <div className="p-2.5 rounded-2xl bg-sanctuary-100/90 border border-[#EAE3DC]">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
-                    1. Kategori Psikolog
-                  </label>
-                  <div className="grid grid-cols-2 gap-1">
-                    {(['Soul Guidance', 'Soul Expert'] as const).map((t) => (
+                {/* Interactive Controls */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 max-w-3xl">
+                  {/* 1. Tier Selector */}
+                  <div className="p-2.5 rounded-lg bg-sanctuary-100/90 border border-line">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
+                      1. Kategori Psikolog
+                    </label>
+                    <div className="grid grid-cols-2 gap-1">
+                      {(['Soul Guidance', 'Soul Expert'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setQuickTier(t)}
+                          className={`px-2 py-1.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer truncate ${
+                            quickTier === t
+                              ? t === 'Soul Expert'
+                                ? 'bg-champagne-600 text-white shadow-xs'
+                                : 'bg-plum-700 text-white shadow-xs'
+                              : 'text-[#52475E] hover:bg-paper-card'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2. Delivery Method Selector */}
+                  <div className="p-2.5 rounded-lg bg-sanctuary-100/90 border border-line">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
+                      2. Metode Sesi
+                    </label>
+                    <div className="grid grid-cols-2 gap-1">
                       <button
-                        key={t}
                         type="button"
-                        onClick={() => setQuickTier(t)}
-                        className={`px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer truncate ${
-                          quickTier === t
-                            ? t === 'Soul Expert'
-                              ? 'bg-champagne-600 text-white shadow-2xs'
-                              : 'bg-plum-700 text-white shadow-2xs'
-                            : 'text-[#52475E] hover:bg-white'
+                        onClick={() => setQuickMethod('online')}
+                        className={`px-2 py-1.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                          quickMethod === 'online'
+                            ? 'bg-plum-700 text-white shadow-xs'
+                            : 'text-[#52475E] hover:bg-paper-card'
                         }`}
                       >
-                        {t}
+                        <Video className="w-3 h-3" />
+                        <span>Online</span>
                       </button>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setQuickMethod('offline')}
+                        className={`px-2 py-1.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                          quickMethod === 'offline'
+                            ? 'bg-plum-700 text-white shadow-xs'
+                            : 'text-[#52475E] hover:bg-paper-card'
+                        }`}
+                      >
+                        <MapPin className="w-3 h-3" />
+                        <span>Klinik</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3. Service Selector */}
+                  <div className="p-2.5 rounded-lg bg-sanctuary-100/90 border border-line">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
+                      3. Jenis Layanan
+                    </label>
+                    <select
+                      value={activeQuickService?.id || ''}
+                      onChange={(e) => setQuickServiceId(e.target.value)}
+                      aria-label="Pilih Jenis Layanan"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-paper-card border border-line text-xs font-bold text-[#1E1429] focus:outline-hidden focus:ring-2 focus:ring-plum-500/20 cursor-pointer"
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                {/* 2. Delivery Method Selector */}
-                <div className="p-2.5 rounded-2xl bg-sanctuary-100/90 border border-[#EAE3DC]">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
-                    2. Metode Sesi
-                  </label>
-                  <div className="grid grid-cols-2 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setQuickMethod('online')}
-                      className={`px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                        quickMethod === 'online'
-                          ? 'bg-plum-700 text-white shadow-2xs'
-                          : 'text-[#52475E] hover:bg-white'
-                      }`}
-                    >
-                      <Video className="w-3 h-3" />
-                      <span>Online</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuickMethod('offline')}
-                      className={`px-2 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                        quickMethod === 'offline'
-                          ? 'bg-plum-700 text-white shadow-2xs'
-                          : 'text-[#52475E] hover:bg-white'
-                      }`}
-                    >
-                      <MapPin className="w-3 h-3" />
-                      <span>Klinik</span>
-                    </button>
+                {/* Live Price & Instant Action */}
+                <div className="flex items-center justify-between lg:justify-end gap-4 pt-2 lg:pt-0 border-t lg:border-t-0 border-line">
+                  <div className="text-left lg:text-right">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#72677E] block">
+                      Estimasi Tarif
+                    </span>
+                    <span className="text-lg font-extrabold text-plum-900 tabular-nums">
+                      {formatIDR(getQuickEstimate())}
+                    </span>
                   </div>
-                </div>
-
-                {/* 3. Service Selector */}
-                <div className="p-2.5 rounded-2xl bg-sanctuary-100/90 border border-[#EAE3DC]">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#72677E] mb-1">
-                    3. Jenis Layanan
-                  </label>
-                  <select
-                    value={activeQuickService?.id || ''}
-                    onChange={(e) => setQuickServiceId(e.target.value)}
-                    aria-label="Pilih Jenis Layanan"
-                    className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#E5DDD5] text-xs font-bold text-[#1E1429] focus:outline-hidden focus:ring-2 focus:ring-plum-500/30 cursor-pointer"
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const params = new URLSearchParams()
+                      if (activeQuickService?.id) params.set('service', activeQuickService.id)
+                      params.set('tier', quickTier)
+                      params.set('method', quickMethod)
+                      navigate(`/booking?${params.toString()}`)
+                    }}
+                    className="rounded-lg h-11 px-5 gap-2 shrink-0 bg-plum-700 hover:bg-plum-800 text-white font-semibold"
                   >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
+                    <span>Cari Slot</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
 
-              {/* Live Price & Instant Action */}
-              <div className="flex items-center justify-between lg:justify-end gap-4 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#F2ECE6]">
-                <div className="text-left lg:text-right">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#72677E] block">
-                    Estimasi Tarif
+              {/* Bottom Micro-Assurance Strip inside Dock */}
+              <div className="mt-4 pt-3 border-t border-line flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#6B6177]">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-plum-600" />
+                    <span>Online (Google Meet) &amp; Tatap Muka (Pondok Bambu)</span>
                   </span>
-                  <span className="text-lg font-extrabold text-plum-900 tabular-nums">
-                    {formatIDR(getQuickEstimate())}
+                  <span className="inline-flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-plum-600" />
+                    <span>Pemesanan mengikat dengan lead time min. 24 jam</span>
                   </span>
                 </div>
-                <Button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/booking?service=${activeQuickService?.id || ''}`
-                    )
-                  }
-                  className="rounded-2xl h-11 px-5 gap-2 shrink-0"
-                >
-                  <span>Cari Slot</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Bottom Micro-Assurance Strip inside Dock */}
-            <div className="mt-4 pt-3 border-t border-[#F2ECE6] flex flex-wrap items-center justify-between gap-3 text-[11px] text-[#6B6177]">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                <span className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-plum-600" />
-                  <span>Online (Google Meet) &amp; Tatap Muka (Pondok Bambu, Jaktim)</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5 text-champagne-600" />
-                  <span>Psikolog Klinis Terverifikasi SIPP</span>
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-plum-500" />
-                  <span>Lead time minimal 24 jam</span>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-plum-500" />
-                  <span>Rekam medis terenkripsi</span>
+                <span className="font-semibold text-plum-800">
+                  Resmi HIMPSI • Kerahasiaan 100% Terjaga
                 </span>
               </div>
             </div>
@@ -564,38 +647,58 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Motion Video Modal (Plays official soulaide-header-loop.mp4 on demand) */}
+      {/* Video Modal (Storage Video or YouTube Embed) */}
       {showMotionVideoModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-plum-950/75 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-plum-950/80 backdrop-blur-sm"
           onClick={() => setShowMotionVideoModal(false)}
         >
           <div
-            className="relative max-w-3xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-white/20"
+            className="relative max-w-3xl w-full bg-white rounded-lg overflow-hidden shadow-2xl border border-line"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#EAE3DC] bg-sanctuary-100">
-              <span className="text-xs font-bold text-[#23192D]">
-                Soulaide Psychology — Official Motion Header
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-line bg-sanctuary-100">
+              <span className="text-xs font-bold font-mono uppercase tracking-wider text-ink">
+                Soulaide Psychology — Video
               </span>
               <button
                 type="button"
                 onClick={() => setShowMotionVideoModal(false)}
-                className="px-3 py-1 rounded-full text-xs font-semibold text-[#645A70] hover:text-[#1E1429] hover:bg-white cursor-pointer"
+                className="px-3 py-1 rounded-sm text-xs font-semibold text-ink-muted hover:text-ink hover:bg-white cursor-pointer"
               >
                 Tutup
               </button>
             </div>
-            <div className="bg-[#EEF3F8]">
-              <video
-                src="/soulaide-header-loop.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                controls
-                className="w-full h-auto block"
-              />
+            <div className="bg-[#EEF3F8] aspect-video w-full flex items-center justify-center">
+              {(() => {
+                const videoUrl = philosophyData.video_url || getAssetUrl('/soulaide-header-loop.mp4')
+                const isYt = isYouTubeUrl(videoUrl)
+                const embedUrl = isYt ? parseYouTubeEmbedUrl(videoUrl) : null
+
+                if (isYt && embedUrl) {
+                  return (
+                    <iframe
+                      src={`${embedUrl}?autoplay=1&rel=0`}
+                      title="Soulaide Psychology Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  )
+                }
+
+                return (
+                  <video
+                    src={videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    controls
+                    className="w-full h-full object-contain block"
+                  />
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -603,23 +706,23 @@ export const LandingPage: React.FC = () => {
 
       {/* =====================================================================
           BEHIND SOULAIDE — Brand Philosophy & Meaning of the Psi Arc
+          Swiss Editorial + Organic Wellness
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
-        <div className="rounded-[2.25rem] bg-white border border-[#EAE3DC] shadow-[0_20px_50px_-24px_rgba(41,23,56,0.12)] p-6 sm:p-10 lg:p-12 overflow-hidden relative">
-          <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-plum-100/50 blur-3xl pointer-events-none" />
-
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10">
+        <div className="rounded-xl bg-paper-card border border-line p-6 sm:p-10 lg:p-12 overflow-hidden relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
             {/* Left Editorial Visual Card */}
             <div className="lg:col-span-5">
-              <div className="relative rounded-3xl overflow-hidden border border-[#EAE3DC] bg-gradient-to-br from-plum-50 via-white to-sanctuary-100 p-3 shadow-md group">
+              <div className="relative overflow-hidden border border-line bg-sanctuary-100 p-2.5 group rounded-md">
                 <img
-                  src="/apa itru Soulaide.jpg"
+                  src={philosophyData.image_url || getAssetUrl('/apa itru Soulaide.webp')}
                   alt="Behind Soulaide Psychology — Makna di balik nama dan logo Soulaide"
-                  className="w-full h-72 sm:h-84 object-cover object-center rounded-2xl transition-transform duration-500 group-hover:scale-102"
+                  onError={handleImageFallback}
+                  className="w-full h-72 sm:h-84 object-cover object-center rounded-sm transition-transform duration-500 group-hover:scale-102"
                 />
-                <div className="mt-3 px-2 py-1 flex items-center justify-between text-xs text-[#5D728F]">
-                  <span className="font-bold text-plum-900">Filosofi Identitas Soulaide</span>
-                  <span className="font-mono text-[11px]">Soul • Aide • Psi (Ψ)</span>
+                <div className="mt-3 px-1 py-1 flex items-center justify-between text-xs text-ink-muted">
+                  <span className="font-semibold text-plum-900">Filosofi Identitas Soulaide</span>
+                  <span className="font-mono text-[11px] text-plum-700">Soul · Aide · Psi (Ψ)</span>
                 </div>
               </div>
             </div>
@@ -627,59 +730,44 @@ export const LandingPage: React.FC = () => {
             {/* Right Story & 3 Philosophy Pillars */}
             <div className="lg:col-span-7 space-y-6">
               <div className="space-y-3">
-                <Badge className="px-3.5 py-1">Behind Soulaide Psychology</Badge>
-                <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429] leading-tight">
-                  Setiap perjalanan memiliki cerita,{' '}
-                  <span className="font-serif italic font-semibold text-plum-700">
-                    dan Anda layak didengar.
+                <div className="flex items-center gap-3">
+                  <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                    {philosophyData.badge || 'Filosofi Klinis'}
+                  </span>
+                </div>
+                <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+                  {philosophyData.title}{' '}
+                  <span className="italic text-plum-700">
+                    {philosophyData.accent}
                   </span>
                 </h2>
-                <p className="text-sm sm:text-base text-[#5A5066] leading-relaxed">
-                  Nama <strong className="text-plum-900">Soulaide</strong> lahir dari perpaduan kata{' '}
-                  <em>Soul</em> (jiwa), <em>Aide</em> (pendamping yang menolong), dan lengkungan simbol{' '}
-                  <em>Psi (Ψ)</em> yang merangkul — melambangkan ilmu psikologi klinis yang hadir secara hangat, setara, dan merengkuh setiap individu tanpa penghakiman.
+                <p className="text-sm sm:text-base text-ink-soft leading-relaxed">
+                  {philosophyData.description}
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-sanctuary-100/80 border border-[#EAE3DC] space-y-1.5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-plum-700 block">
-                    01 • Soul
-                  </span>
-                  <h3 className="text-sm font-bold text-[#1E1429]">Ruang Jiwa Empatik</h3>
-                  <p className="text-xs text-[#645A70] leading-relaxed">
-                    Menghargai keunikan emosi, cerita hidup, dan kerentanan Anda dengan penerimaan utuh.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-sanctuary-100/80 border border-[#EAE3DC] space-y-1.5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-plum-500 block">
-                    02 • Aide
-                  </span>
-                  <h3 className="text-sm font-bold text-[#1E1429]">Pendampingan Aktif</h3>
-                  <p className="text-xs text-[#645A70] leading-relaxed">
-                    Berjalan bersama Anda menemukan regulasi emosi dan langkah pemulihan yang aplikatif.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-sanctuary-100/80 border border-[#EAE3DC] space-y-1.5">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#5D728F] block">
-                    03 • Psi (Ψ)
-                  </span>
-                  <h3 className="text-sm font-bold text-[#1E1429]">Keilmuan &amp; Etika</h3>
-                  <p className="text-xs text-[#645A70] leading-relaxed">
-                    Intervensi berbasis bukti ilmiah (CBT, SFBT, Humanistik, ABA) sesuai Kode Etik HIMPSI.
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-5">
+                {philosophyPillars.map((pillar, idx) => (
+                  <div key={idx} className="border-t border-line pt-3.5 space-y-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-plum-600 block">
+                      {pillar.tag}
+                    </span>
+                    <h3 className="text-sm font-bold text-ink">{pillar.title}</h3>
+                    <p className="text-xs text-ink-muted leading-relaxed">
+                      {pillar.description}
+                    </p>
+                  </div>
+                ))}
               </div>
 
-              <div className="pt-1 flex flex-wrap items-center gap-4 text-xs text-[#645A70]">
+              <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-ink-muted border-t border-line">
                 <span className="inline-flex items-center gap-1.5 font-semibold text-plum-800">
                   <ShieldCheck className="w-4 h-4 text-plum-600" />
                   Terdaftar Surat Izin Praktik Psikolog (SIPP)
                 </span>
-                <span className="text-[#D6CEC2]">•</span>
-                <span>Klinik Pondok Bambu, Jakarta Timur &amp; Google Meet Daring</span>
+                <span className="text-line-strong">•</span>
+                <span>Klinik Pondok Bambu, Jakarta Timur &amp; Google Meet daring</span>
               </div>
             </div>
           </div>
@@ -688,49 +776,54 @@ export const LandingPage: React.FC = () => {
 
       {/* =====================================================================
           HOW IT WORKS — Calm 3-Step Client Journey
+          Structured Horizontal Clinical Flow
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-3">
-          <Badge className="px-3.5 py-1">Alur Sesi Nyaman</Badge>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429]">
-            Tiga Langkah Menuju{' '}
-            <span className="font-serif italic font-semibold text-plum-700">Ruang Aman</span>
-          </h2>
-          <p className="text-sm sm:text-base text-[#645A70] leading-relaxed">
-            Kami merancang proses reservasi yang sederhana, transparan, dan bebas rasa cemas sejak langkah pertama.
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 pb-4 border-b border-line">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                {journeyData?.badge || 'Alur Konseling'}
+              </span>
+            </div>
+            <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+              {journeyData?.title_primary || 'Tiga langkah menuju'}{' '}
+              <span className="italic text-plum-700">
+                {journeyData?.title_accent || 'ruang aman Anda'}
+              </span>
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-ink-muted max-w-md">
+            {journeyData?.subtitle || 'Alur reservasi yang terukur, transparan, dan bebas kecemasan sejak awal.'}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {JOURNEY_STEPS.map((item, idx) => {
-            const Icon = item.icon
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {journeySteps.map((item, idx) => {
+            const icons = [Compass, Calendar, HeartHandshake]
+            const Icon = icons[idx % icons.length]
             return (
               <div
-                key={item.step}
-                className="relative p-7 rounded-3xl sanctuary-card sanctuary-card-hover flex flex-col justify-between group"
+                key={item.step || idx}
+                className="relative p-6 rounded-lg border border-line bg-paper-card flex flex-col justify-between group"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-2xl bg-plum-50 border border-plum-100 text-plum-700 group-hover:bg-plum-700 group-hover:text-white transition-colors flex items-center justify-center">
-                      <Icon className="w-5 h-5" />
+                    <div className="w-10 h-10 rounded-md bg-plum-50 border border-plum-100 text-plum-700 flex items-center justify-center">
+                      <Icon className="w-4.5 h-4.5" />
                     </div>
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sanctuary-100 border border-[#EAE3DC] text-xs font-bold text-plum-700">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.14em] text-plum-600">
                       Langkah {item.step}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-[#23192D]">{item.title}</h3>
-                  <p className="text-sm text-[#645A70] leading-relaxed">{item.description}</p>
+                  <h3 className="text-base font-bold text-ink">{item.title}</h3>
+                  <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">{item.description}</p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#F2ECE6] flex items-center justify-between text-xs text-plum-700 font-semibold">
-                  <span>
-                    {idx === 0
-                      ? '3 Layanan & 4 Psikolog'
-                      : idx === 1
-                        ? 'Konfirmasi Jadwal Atomik'
-                        : 'Privasi Medis Terlindungi'}
-                  </span>
-                  <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-1 transition-transform" />
+                <div className="mt-6 pt-3.5 border-t border-[#EDE6D9] flex items-center justify-between text-xs text-plum-700 font-semibold">
+                  <span>{item.detail}</span>
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
                 </div>
               </div>
             )
@@ -739,264 +832,307 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* =====================================================================
-          COUNSELING TOPICS EXPLORER — Contoh Topik Konseling Resmi Soulaide
+          COUNSELING TOPICS EXPLORER — Intentional 3-Domain Clinical Matrix
+          Anti-AI-Slop Tabbed / Categorized Index
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="rounded-[2.25rem] bg-gradient-to-br from-[#F6F1FB] via-white to-[#F4F7FB] border border-[#E5DDD5] p-6 sm:p-10 lg:p-12 space-y-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10">
+        <div className="rounded-xl bg-paper-card border border-line p-6 sm:p-10 lg:p-12 space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-line">
             <div className="space-y-2 max-w-2xl">
-              <Badge className="px-3.5 py-1">Cakupan Topik Konseling</Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429]">
-                Apa Saja yang Bisa Anda{' '}
-                <span className="font-serif italic font-semibold text-plum-700">Ceritakan?</span>
+              <div className="flex items-center gap-3">
+                <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                  Cakupan Topik
+                </span>
+              </div>
+              <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+                Apa saja yang bisa Anda{' '}
+                <span className="italic text-plum-700">ceritakan?</span>
               </h2>
-              <p className="text-sm sm:text-base text-[#5A5066]">
-                Bersama Psikolog Soulaide, Anda diajak memahami pikiran, emosi, dan pola respons secara sehat dan konstruktif.
+              <p className="text-sm text-ink-muted">
+                Bersama psikolog klinis Soulaide, Anda diajak mengurai pikiran, emosi, dan pola respons secara objektif.
               </p>
             </div>
-            <Link to="/booking">
-              <Button variant="outline" className="rounded-full bg-white gap-2">
-                <Calendar className="w-4 h-4 text-plum-600" />
-                <span>Mulai Ceritakan Kondisimu</span>
-              </Button>
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Domain 1 */}
-            <div className="p-6 rounded-3xl bg-white border border-[#EAE3DC] shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full bg-plum-50 border border-plum-200/70 text-plum-800 text-xs font-bold">
-                  Emosi &amp; Pemahaman Diri
-                </span>
-                <HeartHandshake className="w-5 h-5 text-plum-500" />
-              </div>
-              <ul className="space-y-2.5 text-xs sm:text-sm text-[#4B3F59]">
-                {[
-                  'Overthinking & kecemasan berlebih',
-                  'Stres berkepanjangan & burnout',
-                  'Regulasi emosi & mood swing',
-                  'Mengenal diri lebih dalam',
-                  'Self-esteem & kepercayaan diri',
-                ].map((topic) => (
-                  <li key={topic} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-plum-600 shrink-0 mt-0.5" />
-                    <span>{topic}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Domain 2 */}
-            <div className="p-6 rounded-3xl bg-white border border-[#EAE3DC] shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full bg-plum-50 border border-plum-200/70 text-plum-800 text-xs font-bold">
-                  Kehidupan &amp; Pengembangan Diri
-                </span>
-                <Compass className="w-5 h-5 text-plum-500" />
-              </div>
-              <ul className="space-y-2.5 text-xs sm:text-sm text-[#4B3F59]">
-                {[
-                  'Quarter-life crisis & arah hidup',
-                  'Tekanan pekerjaan & akademik',
-                  'Membangun kebiasaan yang lebih sehat',
-                  'Mengatur tujuan hidup (life goals)',
-                  'Adaptasi lingkungan & caregiver burnout',
-                ].map((topic) => (
-                  <li key={topic} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-plum-600 shrink-0 mt-0.5" />
-                    <span>{topic}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Domain 3 */}
-            <div className="p-6 rounded-3xl bg-white border border-[#EAE3DC] shadow-2xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full bg-champagne-50 border border-champagne-200 text-champagne-700 text-xs font-bold">
-                  Relasi, Keluarga &amp; Parenting
-                </span>
-                <Users className="w-5 h-5 text-champagne-600" />
-              </div>
-              <ul className="space-y-2.5 text-xs sm:text-sm text-[#4B3F59]">
-                {[
-                  'Dinamika pasangan, pernikahan & keluarga',
-                  'Toxic relationship & pemulihan relasi',
-                  'Boundaries (batasan sehat dalam relasi)',
-                  'Trust issue & kesulitan komunikasi',
-                  'Parenting, inklusi & kebutuhan khusus',
-                ].map((topic) => (
-                  <li key={topic} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-champagne-600 shrink-0 mt-0.5" />
-                    <span>{topic}</span>
-                  </li>
-                ))}
-              </ul>
+            {/* Domain Tabs */}
+            <div className="flex items-center gap-1.5 p-1 rounded-md bg-sanctuary-100 border border-line">
+              {CLINICAL_DOMAINS.map((domain) => (
+                <button
+                  key={domain.id}
+                  type="button"
+                  onClick={() => setActiveTopicTab(domain.id)}
+                  className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all cursor-pointer ${
+                    activeTopicTab === domain.id
+                      ? 'bg-plum-900 text-white'
+                      : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  {domain.title}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-plum-900 text-plum-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+          {/* Active Domain Topic Grid */}
+          {CLINICAL_DOMAINS.map((domain) => {
+            if (domain.id !== activeTopicTab) return null
+            const DomainIcon = domain.icon
+            return (
+              <div key={domain.id} className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-md bg-plum-100 text-plum-800 flex items-center justify-center">
+                      <DomainIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-mono font-bold uppercase tracking-wider text-plum-700">
+                        {domain.category} • {domain.title}
+                      </div>
+                      <p className="text-xs text-ink-muted">{domain.subtitle}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono text-ink-muted">
+                    {domain.topics.length} Pokok Bahasan
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {domain.topics.map((t) => (
+                    <div
+                      key={t.name}
+                      className="p-4 rounded-md border border-line bg-paper flex flex-col justify-between space-y-2 hover:border-plum-300 transition-colors"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-plum-700 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-xs font-bold text-ink">{t.name}</h4>
+                          <p className="text-[11px] text-ink-muted mt-0.5">{t.note}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Clinical Assurance Bar */}
+          <div className="p-4 rounded-md bg-plum-900 text-plum-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
             <div className="flex items-center gap-2.5 text-center sm:text-left">
-              <Sparkles className="w-4 h-4 text-champagne-200 shrink-0" />
+              <HeartHandshake className="w-4 h-4 text-champagne-200 shrink-0" />
               <span>
-                <strong className="text-white">Catatan Hangat:</strong> Kamu tetap bisa bercerita tentang kondisimu walau topikmu tidak tercantum di atas.
+                <strong className="text-white">Catatan Klinis:</strong> Setiap tantangan emosi adalah valid. Anda tetap dapat berkonsultasi meskipun topik Anda tidak tertulis di atas.
               </span>
             </div>
             <Link
-              to="/services"
-              className="text-xs font-bold text-champagne-200 hover:text-white underline underline-offset-4 shrink-0"
+              to="/booking"
+              className="text-xs font-bold font-mono uppercase text-champagne-200 hover:text-white underline underline-offset-4 shrink-0"
             >
-              Pelajari Detail Layanan →
+              Mulai Konsultasi →
             </Link>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-          FEATURED PSYCHOLOGISTS — Crisp Studio Portraits
+          FEATURED PSYCHOLOGISTS — Clean Clinical Portraits & Credentials
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
-          <div className="space-y-2">
-            <Badge className="px-3.5 py-1">Tim Profesional Terverifikasi</Badge>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429]">
-              Psikolog <span className="font-serif italic font-semibold text-plum-700">Soulaide</span>
-            </h2>
-            <p className="text-sm sm:text-base text-[#645A70]">
-              Temukan pendamping profesional berlisensi SIPP yang paling selaras dengan kebutuhan emosional Anda.
-            </p>
+      <section id="psikolog" className="border-t border-line">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 pb-4 border-b border-line">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                  Tim Berlisensi
+                </span>
+              </div>
+              <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+                Psikolog Klinis <span className="italic text-plum-700">Soulaide</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-ink-muted max-w-xl">
+                Didampingi langsung oleh 4 psikolog berlisensi SIPP dengan pendekatan ilmiah berbasis bukti.
+              </p>
+            </div>
+            <a
+              href="#kontak"
+              className="inline-flex items-center gap-1.5 text-xs font-bold font-mono uppercase text-plum-800 hover:text-plum-900 group"
+            >
+              <span>Konsultasi Koordinasi Care</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            </a>
           </div>
-          <Link
-            to="/psychologists"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-plum-700 hover:text-plum-900 group"
-          >
-            <span>Lihat Semua Profil &amp; Filter</span>
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {psychologists.slice(0, 4).map((psych) => {
-            const isExpert = psych.tier === 'Soul Expert'
-            return (
-              <Card
-                key={psych.id}
-                className="flex flex-col justify-between sanctuary-card-hover group rounded-3xl"
-              >
-                <div>
-                  {/* Studio Portrait Pedestal */}
-                  <div
-                    className={`relative h-72 overflow-hidden ${
-                      isExpert
-                        ? 'bg-gradient-to-b from-champagne-100/80 via-[#F8F3EC] to-[#F3ECE4]'
-                        : 'bg-gradient-to-b from-plum-100/70 via-[#F6F2FA] to-[#EFEAF5]'
-                    }`}
-                  >
-                    <img
-                      src={psych.profileImage || psych.cardImage}
-                      alt={psych.fullName}
-                      className="w-full h-full object-cover object-top mix-blend-multiply transition-transform duration-500 group-hover:scale-104"
-                      onError={(e) => {
-                        ;(e.target as HTMLImageElement).src = '/Soulaide Psi Arc Logo.png'
-                      }}
-                    />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {psychologists.slice(0, 4).map((psych) => {
+              const isExpert = psych.tier === 'Soul Expert'
+              return (
+                <Card
+                  key={psych.id}
+                  className="flex flex-col justify-between group rounded-lg sm:rounded-md border-line bg-paper-card p-3 sm:p-0"
+                >
+                  <div>
+                    {/* MOBILE VIEW COMPACT CARD HEADER (< sm): Compact Horizontal Card with thumbnail */}
+                    <div className="flex sm:hidden items-start gap-3 pb-3 border-b border-[#EDE6D9]">
+                      <div
+                        className={`relative w-20 h-24 rounded-md overflow-hidden shrink-0 border border-line ${
+                          isExpert ? 'bg-[#F1E8DC]' : 'bg-[#EFEAF0]'
+                        }`}
+                      >
+                        <img
+                          src={psych.profileImage || psych.cardImage}
+                          alt={psych.fullName}
+                          loading="lazy"
+                          className="w-full h-full object-cover object-[center_15%] mix-blend-multiply"
+                          onError={handleImageFallback}
+                        />
+                      </div>
 
-                    {/* Tier Pill (Top Left) */}
-                    <div className="absolute top-3.5 left-3.5">
-                      {isExpert ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-champagne-600 text-white text-[10px] font-bold shadow-sm">
-                          <Sparkles className="w-2.5 h-2.5" />
-                          Soul Expert
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-plum-700 text-white text-[10px] font-bold shadow-sm">
-                          Soul Guidance
-                        </span>
-                      )}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h3 className="text-sm font-bold text-ink leading-tight truncate">
+                              {psych.fullName}
+                            </h3>
+                            {isExpert ? (
+                              <span className="inline-flex items-center rounded-xs bg-champagne-600 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-[#FBF7F0] shrink-0">
+                                Expert
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-xs bg-plum-800 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-[#FBF7F0] shrink-0">
+                                Guidance
+                              </span>
+                            )}
+                          </div>
+                          {getPresencePill(psych.presence)}
+                        </div>
+                        <p className="text-[11px] font-semibold text-plum-600 truncate">{psych.credentials}</p>
+                        <p className="text-[10px] text-ink-muted">
+                          Pengalaman: <strong className="text-ink">{psych.experienceYears}</strong>
+                        </p>
+                        <p className="text-[10px] text-ink-muted truncate">
+                          Pendekatan: <strong className="text-plum-800">{psych.approaches.join(', ')}</strong>
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Presence Indicator (Top Right) */}
-                    <div className="absolute top-3.5 right-3.5">
-                      {getPresencePill(psych.presence)}
+                    {/* DESKTOP VIEW STUDIO PORTRAIT (sm:) */}
+                    <div
+                      className={`hidden sm:block relative h-64 overflow-hidden rounded-t-md ${
+                        isExpert ? 'bg-[#F1E8DC]' : 'bg-[#EFEAF0]'
+                      }`}
+                    >
+                      <img
+                        src={psych.profileImage || psych.cardImage}
+                        alt={psych.fullName}
+                        loading="lazy"
+                        className="w-full h-full object-cover object-[center_15%] mix-blend-multiply transition-transform duration-500 group-hover:scale-102"
+                        onError={handleImageFallback}
+                      />
+
+                      {/* Tier Label (Top Left) */}
+                      <div className="absolute top-2.5 left-2.5">
+                        {isExpert ? (
+                          <span className="inline-flex items-center gap-1 rounded-xs bg-champagne-600 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-[#FBF7F0] shadow-xs">
+                            Soul Expert
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-xs bg-plum-800 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider text-[#FBF7F0] shadow-xs">
+                            Soul Guidance
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Presence Indicator (Top Right) */}
+                      <div className="absolute top-2.5 right-2.5">
+                        {getPresencePill(psych.presence)}
+                      </div>
                     </div>
+
+                    {/* DESKTOP CARD HEADER (sm:) */}
+                    <CardHeader className="hidden sm:block p-4 pb-2 space-y-1">
+                      <CardTitle className="text-sm font-bold text-ink group-hover:text-plum-800 transition-colors">
+                        {psych.fullName}
+                      </CardTitle>
+                      <p className="text-xs font-semibold text-plum-600 truncate">{psych.credentials}</p>
+                      <p className="text-[11px] text-ink-muted">
+                        Pengalaman: <strong className="text-ink">{psych.experienceYears}</strong>
+                      </p>
+                    </CardHeader>
+
+                    {/* CARD CONTENT (Areas of practice) */}
+                    <CardContent className="p-0 sm:px-4 pt-2 sm:pt-1 pb-3 space-y-2">
+                      <div className="flex flex-wrap gap-1">
+                        {psych.practiceAreas.slice(0, 3).map((area, i) => (
+                          <span
+                            key={i}
+                            className="px-1.5 py-0.5 rounded-xs bg-sanctuary-100 border border-line text-ink-soft text-[9px] font-medium"
+                          >
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="hidden sm:block text-[10px] text-ink-muted truncate">
+                        Pendekatan: <strong className="text-plum-800">{psych.approaches.join(', ')}</strong>
+                      </p>
+                    </CardContent>
                   </div>
 
-                  <CardHeader className="p-5 pb-2 space-y-1">
-                    <CardTitle className="text-base font-bold text-[#23192D] group-hover:text-plum-700 transition-colors">
-                      {psych.fullName}
-                    </CardTitle>
-                    <p className="text-xs font-semibold text-plum-600">{psych.credentials}</p>
-                    <p className="text-xs text-[#72677E]">
-                      Pengalaman: <strong className="text-[#23192D]">{psych.experienceYears}</strong>
-                    </p>
-                  </CardHeader>
-
-                  <CardContent className="px-5 pt-1 pb-4 space-y-2.5">
-                    <div className="flex flex-wrap gap-1.5">
-                      {psych.practiceAreas.slice(0, 3).map((area, i) => (
-                        <span
-                          key={i}
-                          className="px-2.5 py-0.5 rounded-full bg-sanctuary-100 border border-[#EAE3DC] text-[#52475E] text-[10px] font-medium"
-                        >
-                          {area}
-                        </span>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-[#72677E] line-clamp-1">
-                      Pendekatan: <strong className="text-plum-800">{psych.approaches.join(', ')}</strong>
-                    </p>
-                  </CardContent>
-                </div>
-
-                <CardFooter className="p-4 pt-3 border-t border-[#F2ECE6] grid grid-cols-2 gap-2">
-                  <Link to={`/psychologists/${psych.id}`} className="w-full">
-                    <Button variant="outline" size="sm" className="w-full rounded-xl text-xs">
-                      Detail Profil
-                    </Button>
-                  </Link>
-                  <Link to={`/booking?psychologist=${psych.id}`} className="w-full">
-                    <Button size="sm" className="w-full rounded-xl text-xs">
-                      Jadwalkan
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            )
-          })}
+                  <CardFooter className="p-0 sm:p-4 pt-3 sm:border-t border-[#EDE6D9] grid grid-cols-2 gap-2">
+                    <Link to={`/psychologists/${psych.id}`} className="w-full">
+                      <Button variant="outline" size="sm" className="w-full text-[11px] h-8 sm:h-9 rounded-sm">
+                        Detail Profil
+                      </Button>
+                    </Link>
+                    <Link to={`/booking?psychologist=${psych.id}&tier=${psych.tier}`} className="w-full">
+                      <Button size="sm" className="w-full text-[11px] h-8 sm:h-9 rounded-sm bg-plum-900 hover:bg-plum-800">
+                        Jadwalkan
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              )
+            })}
+          </div>
         </div>
       </section>
 
       {/* =====================================================================
-          SERVICES SHOWCASE — Architectural Pricing Cards with Tier Switcher
+          SERVICES & PRICING — Editorial Matrix with Tier Switcher
+          3 Canonical Services
          ===================================================================== */}
-      <section className="mt-16 py-20 bg-white border-y border-[#EAE3DC]">
+      <section id="layanan" className="py-20 bg-paper-card border-y border-line">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-6">
-            <div className="space-y-2">
-              <Badge className="px-3.5 py-1">Layanan &amp; Transparansi Tarif</Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429]">
-                Pilihan <span className="font-serif italic font-semibold text-plum-700">Layanan Konseling</span>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6 pb-6 border-b border-line">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                  Layanan &amp; Tarif
+                </span>
+              </div>
+              <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+                Tiga Format <span className="italic text-plum-700">Layanan Konseling</span>
               </h2>
-              <p className="text-sm sm:text-base text-[#645A70]">
-                Struktur biaya transparan untuk sesi Daring (Google Meet) maupun Tatap Muka (Pondok Bambu).
+              <p className="text-xs sm:text-sm text-ink-muted max-w-xl">
+                Transparansi biaya penuh tanpa biaya tersembunyi. Tersedia sesi daring (Google Meet) maupun tatap muka di klinik.
               </p>
             </div>
 
-            {/* Interactive Tier Switcher & Official Brochure Trigger */}
+            {/* Tier Switcher & Official Brochure Trigger */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-1.5 bg-sanctuary-100 p-1.5 rounded-2xl border border-[#EAE3DC]">
+              <div className="inline-flex items-center gap-1 bg-sanctuary-100 p-1 rounded-md border border-line">
                 {(['Soul Guidance', 'Soul Expert'] as const).map((tier) => (
                   <button
                     key={tier}
                     type="button"
                     onClick={() => setShowcaseTier(tier)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors cursor-pointer ${
                       showcaseTier === tier
                         ? tier === 'Soul Expert'
-                          ? 'bg-champagne-600 text-white shadow-xs'
-                          : 'bg-plum-700 text-white shadow-xs'
-                        : 'text-[#52475E] hover:text-[#1E1429]'
+                          ? 'bg-champagne-600 text-[#FBF7F0]'
+                          : 'bg-plum-800 text-[#FBF7F0]'
+                        : 'text-ink-muted hover:text-ink'
                     }`}
                   >
                     {tier}
@@ -1008,15 +1144,16 @@ export const LandingPage: React.FC = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setActiveBrochureImg('/Layanan Kesehatan Mental.jpg')}
-                className="rounded-xl text-xs h-10"
+                onClick={() => setActiveBrochureImg(getAssetUrl('/Layanan Kesehatan Mental.webp'))}
+                className="text-xs rounded-sm"
               >
-                Lihat Brosur Tarif Resmi
+                <BookOpen className="w-3.5 h-3.5 mr-1.5 text-plum-600" />
+                <span>Brosur Tarif Resmi</span>
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {services.map((svc) => {
               const lower = svc.title.toLowerCase()
               const isBundle = lower.includes('bundl')
@@ -1048,66 +1185,70 @@ export const LandingPage: React.FC = () => {
               return (
                 <Card
                   key={svc.id}
-                  className={`flex flex-col justify-between rounded-3xl transition-all duration-300 relative ${
+                  className={`flex flex-col justify-between transition-colors duration-200 relative rounded-md border-line ${
                     isBundle
-                      ? 'border-2 border-champagne-500/80 bg-gradient-to-b from-champagne-50/55 via-white to-white shadow-[0_18px_40px_-18px_rgba(168,122,41,0.28)] hover:-translate-y-1'
-                      : 'sanctuary-card-hover'
+                      ? 'border-plum-800 bg-[#FBF7EF]'
+                      : 'bg-white hover:border-plum-400'
                   }`}
                 >
                   <div>
                     <CardHeader className="p-6 pb-3 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         {isBundle ? (
-                          <Badge variant="warning" className="gap-1 px-3 py-0.5 text-[11px] font-bold">
-                            <Sparkles className="w-3 h-3" /> Best Value
+                          <Badge className="gap-1 bg-plum-800 text-[#FBF7F0] rounded-xs font-mono text-[9px] uppercase">
+                            <CheckCircle2 className="w-3 h-3" /> Paling Lengkap
                           </Badge>
                         ) : (
                           <Badge
                             variant={isExpert ? 'warning' : 'default'}
-                            className="text-[11px]"
+                            className="rounded-xs font-mono text-[9px] uppercase"
                           >
                             {showcaseTier}
                           </Badge>
                         )}
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#72677E] text-right">
-                          <Clock className="w-3.5 h-3.5 text-plum-400 shrink-0" />
-                          <span className="truncate max-w-[165px]" title={svc.duration}>
-                            {isBundle ? '90 Menit Total' : isMhcuOnly ? 'Asesmen + 30 Menit' : '60 Menit'}
-                          </span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-muted text-right">
+                          <Clock className="w-3.5 h-3.5 text-plum-500 shrink-0" />
+                          <span>{svc.duration}</span>
                         </span>
                       </div>
 
-                      <CardTitle className="text-xl font-bold text-[#1E1429] leading-snug">
+                      <CardTitle className="text-lg font-bold text-ink leading-snug">
                         {svc.title}
                       </CardTitle>
-                      <p className="text-[11px] font-semibold text-plum-700 leading-snug">
-                        {svc.duration}
-                      </p>
                     </CardHeader>
 
                     <CardContent className="px-6 pt-1 pb-6 space-y-5">
-                      <p className="text-sm text-[#645A70] leading-relaxed line-clamp-3">
+                      <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
                         {svc.description}
                       </p>
 
+                      <ul className="space-y-2 border-t border-[#EDE6D9] pt-4">
+                        {getServiceFeatures(svc.title).map((feature) => (
+                          <li key={feature} className="flex items-start gap-2 text-xs text-ink-soft">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-plum-600 shrink-0 mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
                       {/* Pricing Breakdown */}
-                      <div className="p-4 rounded-2xl bg-sanctuary-100 border border-[#EAE3DC] space-y-2.5 text-xs">
+                      <div className="p-3.5 rounded-md bg-paper border border-line space-y-2 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-[#645A70] inline-flex items-center gap-1.5">
-                            <Video className="w-3.5 h-3.5 text-plum-500" />
+                          <span className="text-ink-muted inline-flex items-center gap-1.5">
+                            <Video className="w-3.5 h-3.5 text-plum-600" />
                             Sesi Daring (Online)
                           </span>
-                          <span className="font-bold text-sm text-[#1E1429] tabular-nums">
+                          <span className="font-bold font-mono text-sm text-ink tabular-nums">
                             {formatIDR(priceOnline)}
                           </span>
                         </div>
-                        <div className="h-px bg-[#EAE3DC]" />
+                        <div className="h-px bg-line" />
                         <div className="flex items-center justify-between">
-                          <span className="text-[#645A70] inline-flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-plum-500" />
+                          <span className="text-ink-muted inline-flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-plum-600" />
                             Tatap Muka (Klinik)
                           </span>
-                          <span className="font-bold text-sm text-plum-700 tabular-nums">
+                          <span className="font-bold font-mono text-sm text-plum-700 tabular-nums">
                             {priceOffline ? formatIDR(priceOffline) : 'Khusus Online'}
                           </span>
                         </div>
@@ -1115,15 +1256,11 @@ export const LandingPage: React.FC = () => {
                     </CardContent>
                   </div>
 
-                  <CardFooter className="p-6 pt-4 border-t border-[#F2ECE6]">
-                    <Link to={`/booking?service=${svc.id}`} className="w-full">
+                  <CardFooter className="p-6 pt-4 border-t border-[#EDE6D9]">
+                    <Link to={`/booking?service=${svc.id}&tier=${showcaseTier}`} className="w-full">
                       <Button
                         size="md"
-                        className={`w-full gap-2 rounded-xl ${
-                          isBundle
-                            ? 'bg-plum-800 hover:bg-plum-900 text-white'
-                            : 'bg-plum-700 hover:bg-plum-800 text-white'
-                        }`}
+                        className="w-full gap-2 rounded-sm bg-plum-900 hover:bg-plum-800 text-white font-semibold"
                       >
                         <span>Pilih Layanan Ini</span>
                         <ArrowRight className="w-4 h-4" />
@@ -1140,29 +1277,29 @@ export const LandingPage: React.FC = () => {
       {/* Official Brochure Lightbox Modal */}
       {activeBrochureImg && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-plum-950/75 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-plum-950/80 backdrop-blur-sm"
           onClick={() => setActiveBrochureImg(null)}
         >
           <div
-            className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-white/20"
+            className="relative max-w-2xl w-full bg-white rounded-lg overflow-hidden shadow-2xl border border-line"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#EAE3DC] bg-sanctuary-100">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-line bg-sanctuary-100">
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
                 {[
-                  { label: 'Katalog Utama', src: '/Layanan Kesehatan Mental.jpg' },
-                  { label: 'Konseling Individu', src: '/layanan/Konseling Individu.jpg' },
-                  { label: 'MHCU & Bundling', src: '/layanan/Konseling Mental Health Check Up.png' },
-                  { label: 'Soul Expert', src: '/layanan/Online Offline.jpg' },
+                  { label: 'Katalog Utama', src: getAssetUrl('/Layanan Kesehatan Mental.webp') },
+                  { label: 'Konseling Individu', src: getAssetUrl('/layanan/Konseling Individu.webp') },
+                  { label: 'MHCU & Bundling', src: getAssetUrl('/layanan/Konseling Mental Health Check Up.webp') },
+                  { label: 'Pengertian Online & Offline', src: getAssetUrl('/layanan/Online Offline.webp') },
                 ].map((item) => (
                   <button
                     key={item.src}
                     type="button"
                     onClick={() => setActiveBrochureImg(item.src)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
+                    className={`px-3 py-1 rounded-sm text-xs font-semibold whitespace-nowrap cursor-pointer transition-all ${
                       activeBrochureImg === item.src
                         ? 'bg-plum-700 text-white'
-                        : 'bg-white text-[#52475E] hover:bg-plum-50 border border-[#EAE3DC]'
+                        : 'bg-white text-ink hover:bg-plum-50 border border-line'
                     }`}
                   >
                     {item.label}
@@ -1172,7 +1309,7 @@ export const LandingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveBrochureImg(null)}
-                className="ml-2 px-3 py-1 rounded-full text-xs font-bold text-[#645A70] hover:text-[#1E1429] hover:bg-white cursor-pointer shrink-0"
+                className="ml-2 px-3 py-1 rounded-sm text-xs font-bold text-ink-muted hover:text-ink hover:bg-white cursor-pointer shrink-0"
               >
                 Tutup
               </button>
@@ -1181,100 +1318,101 @@ export const LandingPage: React.FC = () => {
               <img
                 src={activeBrochureImg}
                 alt="Brosur Resmi Layanan Kesehatan Mental Soulaide"
-                className="w-full h-auto rounded-2xl object-contain"
+                className="w-full h-auto rounded-md object-contain"
               />
             </div>
           </div>
         </div>
       )}
 
+      <FaqSection />
+      <ContactSection />
+
       {/* =====================================================================
           WHY SOULAIDE — Editorial Value Pillars
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-2.5">
-          <Badge className="px-3.5 py-1">Komitmen Klinis Kami</Badge>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E1429]">
-            Mengapa Memilih{' '}
-            <span className="font-serif italic font-semibold text-plum-700">Soulaide?</span>
-          </h2>
-          <p className="text-sm sm:text-base text-[#645A70]">
-            Standar praktik psikologi profesional yang dibalut kehangatan dan rasa aman.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-7 rounded-3xl sanctuary-card sanctuary-card-hover space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-plum-50 border border-plum-100 text-plum-700 flex items-center justify-center">
-              <HeartHandshake className="w-5.5 h-5.5" />
+      <section className="border-t border-line">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="max-w-2xl mb-10 space-y-2 pb-4 border-b border-line">
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
+              <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                Komitmen Klinis
+              </span>
             </div>
-            <h3 className="text-lg font-bold text-[#23192D]">Psikolog Berizin &amp; Berpengalaman</h3>
-            <p className="text-sm text-[#645A70] leading-relaxed">
-              Didampingi langsung oleh psikolog klinis berlisensi (S.Psi., M.Psi.) yang terverifikasi SIPP dan menjunjung tinggi kode etik profesi.
+            <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
+              Mengapa Memilih <span className="italic text-plum-700">Soulaide?</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-ink-muted">
+              Standar praktik psikologi profesional yang dibalut kehangatan, privasi medis, dan rasa aman.
             </p>
           </div>
 
-          <div className="p-7 rounded-3xl sanctuary-card sanctuary-card-hover space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-plum-50 border border-plum-100 text-plum-700 flex items-center justify-center">
-              <ShieldCheck className="w-5.5 h-5.5" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
+            <div className="border-t border-line pt-5 space-y-3">
+              <HeartHandshake className="w-5 h-5 text-plum-700" aria-hidden="true" />
+              <h3 className="text-sm font-bold text-ink">Psikolog Berizin SIPP</h3>
+              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Didampingi langsung oleh psikolog klinis berlisensi (S.Psi., M.Psi.) yang terdaftar resmi di HIMPSI dan menjunjung tinggi kode etik profesi.
+              </p>
             </div>
-            <h3 className="text-lg font-bold text-[#23192D]">Kerahasiaan Data Terjamin</h3>
-            <p className="text-sm text-[#645A70] leading-relaxed">
-              Catatan sesi dan laporan asesmen MHCU dilindungi kontrol akses otorisasi ketat (least-privilege) yang hanya dapat diakses oleh psikolog Anda.
-            </p>
-          </div>
 
-          <div className="p-7 rounded-3xl sanctuary-card sanctuary-card-hover space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-champagne-50 border border-champagne-200/80 text-champagne-700 flex items-center justify-center">
-              <MessageCircle className="w-5.5 h-5.5" />
+            <div className="border-t border-line pt-5 space-y-3">
+              <ShieldCheck className="w-5 h-5 text-plum-700" aria-hidden="true" />
+              <h3 className="text-sm font-bold text-ink">Kerahasiaan Medis Terjamin</h3>
+              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Catatan sesi dan laporan asesmen MHCU dilindungi kontrol otorisasi ketat dan hanya dapat dibuka oleh psikolog yang menangani Anda.
+              </p>
             </div>
-            <h3 className="text-lg font-bold text-[#23192D]">Pilihan Sesi Fleksibel</h3>
-            <p className="text-sm text-[#645A70] leading-relaxed">
-              Pilih sesi daring (Google Meet) dari kenyamanan ruang pribadi Anda, atau tatap muka di ruang konsultasi tenang di Pondok Bambu, Jakarta Timur.
-            </p>
+
+            <div className="border-t border-line pt-5 space-y-3">
+              <MessageCircle className="w-5 h-5 text-champagne-600" aria-hidden="true" />
+              <h3 className="text-sm font-bold text-ink">Pilihan Sesi Fleksibel</h3>
+              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Pilih sesi daring (Google Meet) dari ruang pribadi Anda, atau tatap muka di ruang konsultasi tenang di Pondok Bambu, Jakarta Timur.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-          CLOSING SANCTUARY CTA BANNER
+          CLOSING CTA — Dignified & Warm
          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        <div className="relative rounded-[2rem] bg-gradient-to-br from-plum-900 via-plum-800 to-[#331B49] p-8 sm:p-14 text-center text-white overflow-hidden shadow-[0_24px_60px_-20px_rgba(41,23,56,0.5)]">
-          <div className="absolute -top-24 -left-16 w-72 h-72 rounded-full bg-plum-400/20 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-champagne-500/15 blur-3xl pointer-events-none" />
-
-          <div className="relative z-10 max-w-2xl mx-auto space-y-5">
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 text-plum-100 text-xs font-semibold backdrop-blur-sm">
-              <Sparkles className="w-3.5 h-3.5 text-champagne-200" />
-              Mulai Perjalanan Anda Hari Ini
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold leading-tight">
-              Anda tidak harus menghadapi semuanya{' '}
-              <span className="font-serif italic font-normal text-plum-200">sendirian.</span>
-            </h2>
-            <p className="text-sm sm:text-base text-plum-100/85 leading-relaxed">
-              Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan sepenuh hati.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-20">
+        <div className="rounded-xl bg-plum-900 p-8 sm:p-12 text-[#FBF7F0] border border-plum-800">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+            <div className="lg:col-span-8 space-y-3">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-200">
+                Mulai Perjalanan Anda
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl leading-[1.08] text-[#FBF7F0]">
+                Anda tidak harus menghadapi semuanya{' '}
+                <span className="italic text-plum-200">sendirian.</span>
+              </h2>
+              <p className="text-sm text-[#D6C9D8] leading-relaxed max-w-xl">
+                Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan empati dan keahlian klinis.
+              </p>
+            </div>
+            <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-2.5 lg:items-stretch">
               <Link to="/booking">
                 <Button
                   size="lg"
-                  className="rounded-full bg-white text-plum-900 hover:bg-sanctuary-100 font-bold h-12 px-7 shadow-lg gap-2"
+                  className="w-full bg-[#FBF7F0] text-plum-900 hover:bg-white gap-2 font-semibold rounded-sm"
                 >
-                  <Calendar className="w-4 h-4 text-plum-700" />
+                  <Calendar className="w-4 h-4" />
                   <span>Reservasi Sesi Sekarang</span>
                 </Button>
               </Link>
-              <Link to="/contact">
+              <a href="#kontak">
                 <Button
                   variant="outline"
                   size="lg"
-                  className="rounded-full border-white/25 bg-white/10 hover:bg-white/20 text-white h-12 px-6 backdrop-blur-sm"
+                  className="w-full border-white/25 text-[#FBF7F0] hover:bg-white/10 hover:border-white/40 rounded-sm"
                 >
-                  Konsultasi Admin via WhatsApp
+                  Konsultasi via WhatsApp
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </div>

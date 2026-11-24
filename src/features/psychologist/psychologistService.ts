@@ -161,6 +161,75 @@ export const psychologistService = {
 
     if (error) {
       console.error('Error updating presence:', error);
+      throw new Error(`Gagal memperbarui status: ${error.message}`);
+    }
+  },
+
+  /**
+   * Save or update all weekly recurring schedules
+   */
+  async saveWeeklySchedules(
+    psychologistId: string,
+    schedules: ScheduleDayItem[]
+  ): Promise<void> {
+    for (const item of schedules) {
+      const startTime = item.start_time.length === 5 ? `${item.start_time}:00` : item.start_time;
+      const endTime = item.end_time.length === 5 ? `${item.end_time}:00` : item.end_time;
+
+      if (item.id && !item.id.startsWith('default-')) {
+        const { error } = await supabase
+          .from('Soulaide_psychologist_schedules')
+          .update({
+            is_active: item.is_active,
+            start_time: startTime,
+            end_time: endTime,
+          })
+          .eq('id', item.id);
+
+        if (error) {
+          console.error(`Error updating schedule for day ${item.day_of_week}:`, error);
+          throw new Error(`Gagal menyimpan jadwal ${item.day_name}: ${error.message}`);
+        }
+      } else {
+        // Check if row already exists for this psychologist and day
+        const { data: existing } = await supabase
+          .from('Soulaide_psychologist_schedules')
+          .select('id')
+          .eq('psychologist_id', psychologistId)
+          .eq('day_of_week', item.day_of_week)
+          .maybeSingle();
+
+        if (existing) {
+          const { error } = await supabase
+            .from('Soulaide_psychologist_schedules')
+            .update({
+              is_active: item.is_active,
+              start_time: startTime,
+              end_time: endTime,
+            })
+            .eq('id', existing.id);
+
+          if (error) {
+            console.error(`Error updating schedule for day ${item.day_of_week}:`, error);
+            throw new Error(`Gagal menyimpan jadwal ${item.day_name}: ${error.message}`);
+          }
+        } else {
+          const { error } = await supabase
+            .from('Soulaide_psychologist_schedules')
+            .insert({
+              psychologist_id: psychologistId,
+              day_of_week: item.day_of_week,
+              start_time: startTime,
+              end_time: endTime,
+              is_active: item.is_active,
+            });
+
+          if (error) {
+            console.error(`Error inserting schedule for day ${item.day_of_week}:`, error);
+            throw new Error(`Gagal menambahkan jadwal ${item.day_name}: ${error.message}`);
+          }
+        }
+      }
     }
   },
 
