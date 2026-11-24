@@ -5,6 +5,8 @@ import type {
   AdminStaffItem,
   AdminAuditLogItem,
   AdminKpiSummary,
+  ManualSettlementResult,
+  QrisSyncResult,
 } from './types';
 import type { UserRole, BookingStatus } from '@/types';
 import type { PaymentStatus } from '@/features/payments/types';
@@ -184,37 +186,51 @@ export const adminService = {
     const bookingIds = payments.map((p) => p.booking_id);
     const { data: bookings } = await supabase
       .from('Soulaide_bookings')
-      .select('id, booking_code, customer_id, service_id')
+      .select('id, booking_code, customer_id, service_id, psychologist_id, status')
       .in('id', bookingIds);
 
     const customerIds = Array.from(new Set((bookings || []).map((b) => b.customer_id)));
     const serviceIds = Array.from(new Set((bookings || []).map((b) => b.service_id)));
+    const psychologistIds = Array.from(new Set((bookings || []).map((b) => b.psychologist_id)));
 
-    const [profilesRes, servicesRes] = await Promise.all([
+    const [profilesRes, servicesRes, psychologistsRes] = await Promise.all([
       supabase.from('Soulaide_profiles').select('id, full_name, email').in('id', customerIds),
       supabase.from('Soulaide_services').select('id, name').in('id', serviceIds),
+      psychologistIds.length > 0
+        ? supabase.from('Soulaide_psychologists').select('id, full_name').in('id', psychologistIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
     ]);
 
     const profileMap = new Map((profilesRes.data || []).map((p) => [p.id, p]));
     const serviceMap = new Map((servicesRes.data || []).map((s) => [s.id, s.name]));
+    const psychologistMap = new Map((psychologistsRes.data || []).map((p) => [p.id, p.full_name]));
     const bookingMap = new Map((bookings || []).map((b) => [b.id, b]));
 
     return payments.map((p) => {
       const b = bookingMap.get(p.booking_id);
       const prof = b ? profileMap.get(b.customer_id) : null;
       const sName = b ? serviceMap.get(b.service_id) : 'Layanan Psikologi';
+      const source = p.settlement_source === 'manual' || p.settlement_source === 'provider'
+        ? p.settlement_source
+        : null;
 
       return {
         id: p.id,
         booking_id: p.booking_id,
         booking_code: b?.booking_code || 'SLD-UNKNOWN',
+        booking_status: b?.status || null,
         customer_name: prof?.full_name || 'Pelanggan',
         customer_email: prof?.email || null,
+        psychologist_name: b ? psychologistMap.get(b.psychologist_id) || 'Psikolog' : 'Psikolog',
         service_name: sName || 'Konseling Psikologi',
         amount: Number(p.amount),
         status: p.status as PaymentStatus,
         provider_order_id: p.provider_order_id,
         provider_transaction_id: p.provider_transaction_id,
+        provider_status: p.provider_status,
+        provider_checked_at: p.provider_checked_at,
+        settlement_source: source,
+        manual_settlement_reason: p.manual_settlement_reason,
         unique_code: p.unique_code ?? null,
         total_amount: p.total_amount != null ? Number(p.total_amount) : null,
         payment_type: p.payment_type,
@@ -222,6 +238,43 @@ export const adminService = {
         created_at: p.created_at,
       };
     });
+  },
+
+  /**
+   * Ask the server to read this booking's payment from QRISGate and apply it
+   * when the provider already knows the outcome.
+   */
+  async syncPaymentWithQrisGate(bookingId: string): Promise<QrisSyncResult> {
+    const { data, error } = await supabase.rpc('Soulaide_check_payment_status', {
+      p_booking_id: bookingId,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    const result = (data ?? {}) as unknown as QrisSyncResult;
+    if (result.success === false) {
+      throw new Error(result.error || 'Gagal menyinkronkan status QRISGate');
+    }
+    return result;
+  },
+
+  /**
+   * Mark a missed listener payment as paid inside Soulaide only.
+   * QRISGate is not contacted.
+   */
+  async markPaymentPaidManually(paymentId: string, reason: string): Promise<ManualSettlementResult> {
+    const { data, error } = await supabase.rpc('Soulaide_admin_mark_payment_paid', {
+      p_payment_id: paymentId,
+      p_reason: reason.trim(),
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    const result = (data ?? {}) as unknown as ManualSettlementResult;
+    if (result.success === false) {
+      throw new Error(result.error || 'Gagal menandai lunas');
+    }
+    return result;
   },
 
   /**

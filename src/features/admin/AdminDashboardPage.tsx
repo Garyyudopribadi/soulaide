@@ -105,7 +105,7 @@ export const AdminDashboardPage: React.FC = () => {
         },
         {
           key: 'payments',
-          label: 'Pembayaran & Refund',
+          label: 'Transaksi',
           icon: CreditCard,
           badge: pendingGatewayPayments,
           badgeTone: 'amber',
@@ -198,9 +198,9 @@ export const AdminDashboardPage: React.FC = () => {
         <div className="space-y-5">
           <DashboardSubHeader
             eyebrow="Keuangan"
-            title="Rekonsiliasi"
-            accent="Pembayaran"
-            description="Cocokkan transaksi QRISGate, telusuri status pembayaran, dan proses refund sesuai kebijakan."
+            title="Transaksi"
+            accent="QRISGate"
+            description="Sinkronkan status dari QRISGate. Jika listener tidak mendeteksi pembayaran, tandai lunas dari sini tanpa membuka QRISGate."
           />
           <AdminPaymentsTab
             payments={payments}

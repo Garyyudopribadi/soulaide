@@ -53,18 +53,44 @@ export interface AdminPaymentItem {
   id: string;
   booking_id: string;
   booking_code: string;
+  booking_status: string | null;
   customer_name: string;
   customer_email: string | null;
+  psychologist_name: string;
   service_name: string;
   amount: number;
   status: PaymentStatus;
   provider_order_id: string;
   provider_transaction_id: string | null;
+  provider_status: string | null;
+  provider_checked_at: string | null;
+  settlement_source: 'provider' | 'manual' | null;
+  manual_settlement_reason: string | null;
   unique_code?: number | null;
   total_amount?: number | null;
   payment_type: string | null;
   payment_time: string | null;
   created_at: string;
+}
+
+export interface ManualSettlementResult {
+  success: boolean;
+  already_paid?: boolean;
+  payment_status?: string;
+  booking_status?: string;
+  slot_blocked?: boolean;
+  error?: string;
+}
+
+export interface QrisSyncResult {
+  success: boolean;
+  provider_checked?: boolean;
+  provider_status?: string | null;
+  payment_status?: string;
+  booking_status?: string;
+  amount_mismatch?: boolean;
+  slot_blocked?: boolean;
+  error?: string;
 }
 
 export interface AdminStaffItem {

@@ -1643,8 +1643,14 @@ export type Database = {
           provider: string
           provider_order_id: string
           provider_transaction_id: string | null
+          provider_status: string | null
+          provider_checked_at: string | null
           qr_image: string | null
           qr_string: string | null
+          settlement_source: string | null
+          manual_settlement_reason: string | null
+          manual_settled_by: string | null
+          manual_settled_at: string | null
           status: string
           total_amount: number | null
           unique_code: number | null
@@ -1662,8 +1668,14 @@ export type Database = {
           provider?: string
           provider_order_id: string
           provider_transaction_id?: string | null
+          provider_status?: string | null
+          provider_checked_at?: string | null
           qr_image?: string | null
           qr_string?: string | null
+          settlement_source?: string | null
+          manual_settlement_reason?: string | null
+          manual_settled_by?: string | null
+          manual_settled_at?: string | null
           status?: string
           total_amount?: number | null
           unique_code?: number | null
@@ -1681,8 +1693,14 @@ export type Database = {
           provider?: string
           provider_order_id?: string
           provider_transaction_id?: string | null
+          provider_status?: string | null
+          provider_checked_at?: string | null
           qr_image?: string | null
           qr_string?: string | null
+          settlement_source?: string | null
+          manual_settlement_reason?: string | null
+          manual_settled_by?: string | null
+          manual_settled_at?: string | null
           status?: string
           total_amount?: number | null
           unique_code?: number | null
@@ -2131,6 +2149,14 @@ export type Database = {
       psychology_user_has_role: {
         Args: { target_role: string }
         Returns: boolean
+      }
+      Soulaide_admin_mark_payment_paid: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
+      Soulaide_check_payment_status: {
+        Args: { p_booking_id: string }
+        Returns: Json
       }
       Soulaide_append_thread_message: {
         Args: {
