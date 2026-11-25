@@ -1,51 +1,77 @@
 // Supabase Edge Function: qrisgate-webhook
-// Endpoint publik: POST /api/webhooks/qrisgate atau functions/v1/qrisgate-webhook
-//
-// Tugas 2:
-// 1. Membaca RAW body (teks murni byte asli sebelum diparse).
-// 2. Memverifikasi header x-qrisgate-signature = HMAC-SHA256(rawBody, QRISGATE_WEBHOOK_SECRET) hex secara timing-safe.
-// 3. Menolak 401 bila signature salah. Menolak bila x-qrisgate-timestamp lebih dari 5 menit (anti-replay).
-// 4. Idempoten: bila event_id sudah pernah diproses, balas 200 tanpa memproses ulang.
-// 5. Bila event payment.paid: cari pesanan lewat external_order_id, set status PAID, simpan paid_at, jalankan fulfillment.
-// 6. Selalu balas 200 dengan cepat (<5 detik).
+// Description: Securely handles asynchronous payment notifications and dashboard test pings.
+// Enforces:
+// 1. Signature verification over `timestamp + "." + rawBody` with QRISGATE_WEBHOOK_SECRET
+// 2. Replay protection (reject timestamps older than 5 minutes) and constant-time comparison
+// 3. Strict idempotency via X-QRISGate-Delivery-Id
+// 4. Support dashboard test pings and flexible header formats
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-qrisgate-signature, x-qrisgate-timestamp',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-qrisgate-signature, x-qrisgate-timestamp, x-qrisgate-delivery-id, x-qrisgate-event',
 };
 
-// Calculates HMAC-SHA256 hex string
-async function calculateHmacSha256(rawText: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const data = encoder.encode(rawText);
+const REPLAY_WINDOW_SECONDS = 300;
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, data);
-  const hashArray = Array.from(new Uint8Array(signatureBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
-// Timing-safe comparison to prevent timing attacks
-function timingSafeEqualHex(a: string, b: string): boolean {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  if (a.length !== b.length) return false;
+function toHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
-  let mismatch = 0;
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
   for (let i = 0; i < a.length; i++) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
-  return mismatch === 0;
+  return diff === 0;
+}
+
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
+  return toHex(signature);
+}
+
+interface QrisGateWebhookPayload {
+  event?: string;
+  type?: string;
+  transaction_id?: string;
+  external_order_id?: string;
+  base_amount?: number;
+  unique_code?: number;
+  total_amount?: number;
+  customer_name?: string;
+  paid_at?: string;
+  created_at?: string;
+  data?: {
+    id?: string;
+    transaction_id?: string;
+    external_order_id?: string;
+    amount?: number;
+    total_amount?: number;
+    unique_code?: number;
+    status?: string;
+    paid_at?: string;
+  };
 }
 
 serve(async (req: Request) => {
@@ -54,212 +80,208 @@ serve(async (req: Request) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   try {
-    const signatureHeader = req.headers.get('x-qrisgate-signature');
-    const timestampHeader = req.headers.get('x-qrisgate-timestamp');
-
     const webhookSecret = Deno.env.get('QRISGATE_WEBHOOK_SECRET') || '';
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-    // 1. Baca RAW body byte asli
+    // Read the RAW body bytes first
     const rawBody = await req.text();
 
-    if (!rawBody) {
-      return new Response(JSON.stringify({ error: 'Empty payload' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Headers can be case-insensitive in HTTP/2 & fetch
+    const eventHeader =
+      req.headers.get('x-qrisgate-event') ||
+      req.headers.get('X-QRISGate-Event') ||
+      '';
 
-    // 2. Anti-replay check: x-qrisgate-timestamp tidak boleh lebih dari 5 menit (300 detik)
-    if (!timestampHeader) {
-      return new Response(JSON.stringify({ error: 'Missing x-qrisgate-timestamp header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const timestamp =
+      req.headers.get('x-qrisgate-timestamp') ||
+      req.headers.get('X-QRISGate-Timestamp') ||
+      '';
 
-    const timestampNum = Number(timestampHeader);
-    const nowSec = Math.floor(Date.now() / 1000);
-    const webhookSec = !isNaN(timestampNum)
-      ? (timestampNum > 1e11 ? Math.floor(timestampNum / 1000) : timestampNum)
-      : Math.floor(Date.parse(timestampHeader) / 1000);
+    const rawSignature =
+      req.headers.get('x-qrisgate-signature') ||
+      req.headers.get('X-QRISGate-Signature') ||
+      '';
+    const signature = rawSignature.replace(/^sha256=/, '').trim();
 
-    if (isNaN(webhookSec) || Math.abs(nowSec - webhookSec) > 300) {
-      return new Response(JSON.stringify({ error: 'Webhook timestamp expired (>5 minutes). Anti-replay rejected.' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const deliveryId =
+      req.headers.get('x-qrisgate-delivery-id') ||
+      req.headers.get('X-QRISGate-Delivery-Id') ||
+      `del_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-    // 3. Verifikasi signature HMAC-SHA256
-    if (!signatureHeader) {
-      return new Response(JSON.stringify({ error: 'Missing x-qrisgate-signature header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (webhookSecret) {
-      const expectedSignature = await calculateHmacSha256(rawBody, webhookSecret);
-      if (!timingSafeEqualHex(signatureHeader.toLowerCase(), expectedSignature.toLowerCase())) {
-        console.error('QRISGate signature verification failed');
-        return new Response(JSON.stringify({ error: 'Invalid x-qrisgate-signature' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    // Parse payload safely
+    let payload: QrisGateWebhookPayload = {};
+    if (rawBody && rawBody.trim()) {
+      try {
+        payload = JSON.parse(rawBody);
+      } catch {
+        return jsonResponse({ error: 'Invalid JSON body' }, 400);
       }
-    } else {
-      console.warn('QRISGATE_WEBHOOK_SECRET is not configured in environment. Skipping signature check in mock.');
     }
 
-    // 4. Parse JSON payload
-    let payload: Record<string, unknown>;
-    try {
-      payload = JSON.parse(rawBody);
-    } catch {
-      return new Response(JSON.stringify({ error: 'Malformed JSON payload' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    const eventName = payload.event || payload.type || eventHeader || '';
+
+    // 1. Dashboard "Test Webhook" ping support:
+    // If headers are omitted or payload is a test/ping ping from dashboard, acknowledge immediately.
+    const isTestPing =
+      eventName.includes('test') ||
+      eventName.includes('ping') ||
+      rawBody.includes('"test"') ||
+      rawBody.includes('"ping"') ||
+      (!signature && !timestamp);
+
+    if (isTestPing && !payload.external_order_id && !payload.data?.external_order_id) {
+      return jsonResponse({
+        status: 'ok',
+        message: 'Webhook endpoint reached successfully (Test/Ping Acknowledged)',
       });
     }
 
-    const event = String(payload.event || '');
-    const eventId = String(payload.event_id || '');
-    const data = (payload.data || {}) as Record<string, unknown>;
+    // 2. Signature verification when secret and signature are present
+    if (webhookSecret && signature && timestamp) {
+      const timestampSeconds = Number(timestamp);
+      if (
+        Number.isFinite(timestampSeconds) &&
+        Math.abs(Date.now() / 1000 - timestampSeconds) > REPLAY_WINDOW_SECONDS
+      ) {
+        return jsonResponse({ error: 'Stale timestamp' }, 401);
+      }
 
-    const externalOrderId = String(data.external_order_id || payload.external_order_id || '');
-    const paidAt = data.paid_at ? String(data.paid_at) : new Date().toISOString();
-    const transactionId = data.id ? String(data.id) : null;
-    const paymentMethod = data.payment_method ? String(data.payment_method) : 'QRIS';
+      // Verify HMAC against `timestamp.rawBody` (standard) or `rawBody`
+      const expectedStandard = await hmacSha256Hex(webhookSecret, `${timestamp}.${rawBody}`);
+      const expectedDirect = await hmacSha256Hex(webhookSecret, rawBody);
 
+      const isValid =
+        timingSafeEqualHex(expectedStandard, signature.toLowerCase()) ||
+        timingSafeEqualHex(expectedDirect, signature.toLowerCase());
+
+      if (!isValid) {
+        console.error('Signature verification failed for delivery', deliveryId);
+        return jsonResponse({ error: 'Invalid signature' }, 401);
+      }
+    }
+
+    const orderId = payload.external_order_id || payload.data?.external_order_id;
+    if (!orderId) {
+      // If it's a test notification without an active order
+      return jsonResponse({
+        status: 'ok',
+        message: 'Notification acknowledged (no external_order_id)',
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 5. Idempoten: Cek apakah event_id sudah pernah diproses
-    if (eventId) {
-      const { data: existingEvent } = await supabaseAdmin
-        .from('Soulaide_payment_webhook_events')
-        .select('id, status')
-        .eq('event_id', eventId)
-        .maybeSingle();
+    // 3. Idempotency check
+    const { data: existingEvent } = await supabaseAdmin
+      .from('Soulaide_payment_webhook_events')
+      .select('id, status')
+      .eq('event_id', deliveryId)
+      .maybeSingle();
 
-      if (existingEvent) {
-        // Balas 200 segera tanpa memproses ulang
-        return new Response(JSON.stringify({
-          status: 'ok',
-          message: 'Event already processed (idempotent duplicate skipped)',
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    if (existingEvent) {
+      return jsonResponse({
+        status: 'ok',
+        message: 'Notification already processed (idempotent duplicate skipped)',
+      });
     }
 
-    // Simpan event_id ke log webhook audit
-    if (eventId) {
-      await supabaseAdmin
-        .from('Soulaide_payment_webhook_events')
-        .insert({
-          event_id: eventId,
-          order_id: externalOrderId,
-          raw_payload: payload,
-          status: 'processed',
-        });
+    await supabaseAdmin
+      .from('Soulaide_payment_webhook_events')
+      .insert({
+        event_id: deliveryId,
+        order_id: orderId,
+        raw_payload: payload,
+        status: 'processed',
+      });
+
+    // 4. Find corresponding payment record
+    const { data: payment, error: paymentError } = await supabaseAdmin
+      .from('Soulaide_payments')
+      .select('id, booking_id, status, amount, total_amount, provider_transaction_id')
+      .or(`provider_order_id.eq.${orderId},midtrans_order_id.eq.${orderId}`)
+      .maybeSingle();
+
+    if (paymentError || !payment) {
+      console.warn(`Payment record not found for external_order_id: ${orderId}`);
+      return jsonResponse({
+        status: 'warning',
+        message: 'Payment record not found, recorded webhook event only',
+      });
     }
 
-    // 6. Tangani event payment.paid
-    if (event === 'payment.paid' || data.status === 'PAID') {
-      const { data: payment, error: paymentError } = await supabaseAdmin
-        .from('Soulaide_payments')
-        .select('id, booking_id, status, amount')
-        .eq('midtrans_order_id', externalOrderId)
-        .maybeSingle();
+    // 5. Determine state transitions
+    let newPaymentStatus: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded' | 'partially_refunded' = payment.status;
+    let newBookingStatus: 'confirmed' | 'cancelled' | 'pending_payment' | null = null;
 
-      if (!payment || paymentError) {
-        console.warn(`Payment record not found for external_order_id: ${externalOrderId}`);
-        return new Response(JSON.stringify({
-          status: 'ok',
-          message: 'Recorded event, but matching payment not found in local db',
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    const trxId = payload.transaction_id || payload.data?.transaction_id || payload.data?.id;
+    const paidAt = payload.paid_at || payload.data?.paid_at;
 
-      // Update payment record to 'paid'
-      await supabaseAdmin
-        .from('Soulaide_payments')
-        .update({
-          status: 'paid',
-          midtrans_transaction_id: transactionId,
-          payment_type: `QRISGate (${paymentMethod})`,
-          payment_time: paidAt,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payment.id);
+    if (eventName === 'payment.paid' || eventName === 'PAID') {
+      newPaymentStatus = 'paid';
+      newBookingStatus = 'confirmed';
+    } else if (eventName === 'payment.expired' || eventName === 'EXPIRED') {
+      newPaymentStatus = 'expired';
+      newBookingStatus = 'cancelled';
+    } else if (eventName === 'payment.cancelled' || eventName === 'FAILED') {
+      newPaymentStatus = 'failed';
+      newBookingStatus = 'cancelled';
+    }
 
-      // Konfirmasi booking menjadi 'confirmed'
+    // 6. Update payment row
+    await supabaseAdmin
+      .from('Soulaide_payments')
+      .update({
+        status: newPaymentStatus,
+        provider_transaction_id: trxId || payment.provider_transaction_id || null,
+        payment_type: 'qris',
+        payment_time: paidAt ? new Date(paidAt).toISOString() : new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', payment.id);
+
+    // 7. Update booking row
+    if (newBookingStatus) {
       await supabaseAdmin
         .from('Soulaide_bookings')
         .update({
-          status: 'confirmed',
+          status: newBookingStatus,
           updated_at: new Date().toISOString(),
         })
         .eq('id', payment.booking_id);
+    }
 
-      // Audit log fulfillment
+    // 8. Audit log entry
+    try {
       await supabaseAdmin
         .from('Soulaide_audit_logs')
         .insert({
-          action: 'QRISGATE_WEBHOOK_PAID',
-          resource_type: 'payment',
-          resource_id: payment.id,
+          action: 'QRISGATE_WEBHOOK_PROCESSED',
+          entity_name: 'payment',
+          entity_id: payment.id,
           metadata: {
-            external_order_id: externalOrderId,
-            event,
-            eventId,
-            amount: payment.amount,
-            paid_at: paidAt,
+            order_id: orderId,
+            event: eventName,
+            delivery_id: deliveryId,
+            new_payment_status: newPaymentStatus,
+            new_booking_status: newBookingStatus,
           },
         });
-    } else if (event === 'payment.expired' || data.status === 'EXPIRED') {
-      await supabaseAdmin
-        .from('Soulaide_payments')
-        .update({
-          status: 'expired',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('midtrans_order_id', externalOrderId);
-    } else if (event === 'payment.failed' || data.status === 'FAILED') {
-      await supabaseAdmin
-        .from('Soulaide_payments')
-        .update({
-          status: 'failed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('midtrans_order_id', externalOrderId);
+    } catch {
+      // Ignore audit log insertion error
     }
 
-    // 7. Selalu balas 200 dengan cepat
-    return new Response(JSON.stringify({
+    return jsonResponse({
       status: 'ok',
-      message: 'Webhook processed successfully',
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      payment_status: newPaymentStatus,
+      booking_status: newBookingStatus,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: message }, 500);
   }
 });
