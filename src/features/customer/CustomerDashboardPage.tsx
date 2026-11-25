@@ -295,7 +295,7 @@ export const CustomerDashboardPage: React.FC = () => {
             eyebrow="Keuangan"
             title="Tagihan &"
             accent="Kwitansi"
-            description="Pantau status invoice Midtrans dan unduh kwitansi resmi untuk setiap transaksi."
+            description="Pantau status invoice pembayaran dan unduh kwitansi resmi untuk setiap transaksi."
           />
           <CustomerPaymentsTab
             payments={payments}

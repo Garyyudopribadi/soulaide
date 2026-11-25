@@ -102,7 +102,7 @@ export function useFaqs() {
     mutationFn: async (faqId: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('Soulaide_faqs') as any)
-        .update({ is_active: false })
+        .delete()
         .eq('id', faqId)
 
       if (error) {

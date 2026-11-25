@@ -101,7 +101,15 @@ export const AccountProfileSecurity: React.FC<AccountProfileSecurityProps> = ({
       }
     }
     setAvatar('')
-    setAvatarUploadNotice('Foto profil dihapus. Klik "Simpan Profil Akun" untuk menerapkan perubahan.')
+    try {
+      await customerService.updateUserProfile(userId, {
+        avatar_url: null,
+      })
+      onProfileUpdated?.()
+      setAvatarUploadNotice('Foto profil berhasil dihapus dari sistem dan penyimpanan.')
+    } catch {
+      setAvatarUploadNotice('Foto profil dihapus. Klik "Simpan Profil Akun" untuk menerapkan perubahan.')
+    }
   }
 
   const handleUpdateProfile = async (e: React.FormEvent) => {

@@ -131,12 +131,12 @@ export const AdminCmsPsychologists: React.FC = () => {
   }
 
   const handleDeletePsych = async (id: string, name: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menonaktifkan psikolog "${name}"?`)) return
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus psikolog "${name}" dari sistem dan basis data?`)) return
     try {
       await deletePsychologist(id)
-      showNotification('success', `Psikolog "${name}" berhasil dinonaktifkan.`)
+      showNotification('success', `Psikolog "${name}" berhasil dihapus dari sistem.`)
     } catch (err) {
-      showNotification('error', err instanceof Error ? err.message : 'Gagal menonaktifkan psikolog.')
+      showNotification('error', err instanceof Error ? err.message : 'Gagal menghapus psikolog.')
     }
   }
 
@@ -150,10 +150,15 @@ export const AdminCmsPsychologists: React.FC = () => {
 
     setUploadingImg(true)
     try {
+      const prevUrl = isEdit && editingPsych
+        ? (targetType === 'card' ? editingPsych.cardImageUrl : editingPsych.profileImageUrl)
+        : undefined
+
       const res = await uploadManagedAsset({
         file,
         folder: 'psychologists',
         customName: `psikolog-${targetType}`,
+        previousUrl: prevUrl || null,
       })
 
       if (isEdit && editingPsych) {

@@ -1,13 +1,18 @@
 -- Migration: 20261122000010_update_soulaide_services.sql
 -- Description: Revisi katalog layanan menjadi 3 layanan utama (Individual Counseling, MHCU, Bundle Packet),
--- dengan dukungan penuh untuk metode online dan offline pada setiap layanan.
+-- dengan dukungan penuh untuk metode online dan offline pada setiap layanan serta UUID valid RFC 4122.
 
--- 1. Deactivate or clean up obsolete legacy services
+-- 1. Ensure service category exists
+INSERT INTO public."Soulaide_service_categories" (id, name, slug, description)
+VALUES ('c1000000-0000-0000-0000-000000000001', 'Soul Guidance', 'soul-guidance', 'Layanan bimbingan dan konseling psikologis')
+ON CONFLICT (slug) DO NOTHING;
+
+-- 2. Deactivate or clean up obsolete legacy services
 UPDATE public."Soulaide_services"
 SET is_active = FALSE
 WHERE slug IN ('mhcu-assessment-online', 'individual-counseling-60m-offline', 'individual-counseling-60m-online', 'bundle-mhcu-counseling-online');
 
--- 2. Upsert the 3 revised canonical services
+-- 3. Upsert the 3 revised canonical services with valid hexadecimal UUIDs
 INSERT INTO public."Soulaide_services" (
   id,
   category_id,
@@ -21,7 +26,7 @@ INSERT INTO public."Soulaide_services" (
   is_active
 ) VALUES
   (
-    's1000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000001',
     'c1000000-0000-0000-0000-000000000001',
     'Individual Counseling',
     'individual-counseling',
@@ -33,7 +38,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's2000000-0000-0000-0000-000000000002',
+    'e2000000-0000-0000-0000-000000000002',
     'c1000000-0000-0000-0000-000000000001',
     'MHCU (Mental Health Check Up)',
     'mhcu',
@@ -45,7 +50,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's3000000-0000-0000-0000-000000000003',
+    'e3000000-0000-0000-0000-000000000003',
     'c1000000-0000-0000-0000-000000000001',
     'Bundle Packet',
     'bundle-packet',

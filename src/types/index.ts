@@ -54,4 +54,5 @@ export interface ServiceDetail {
   deliveryMethods?: DeliveryMethod[]
   description: string
   isConfirmedPrice: boolean
+  features?: string[]
 }

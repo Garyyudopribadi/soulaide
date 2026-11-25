@@ -4,7 +4,6 @@ import {
   HeartHandshake,
   ShieldCheck,
   Calendar,
-  MessageCircle,
   Clock,
   ArrowRight,
   ArrowUpRight,
@@ -21,7 +20,7 @@ import { Button } from '@/components/ui/button.tsx'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
 import { usePsychologists } from '@/features/psychologists/usePsychologists.ts'
-import { useServices } from '@/features/services/useServices.ts'
+import { useServices, calculateServicePrice, getServiceFeatures } from '@/features/services/useServices.ts'
 import { formatIDR, getAssetUrl, handleImageFallback } from '@/lib/utils.ts'
 import { isYouTubeUrl, parseYouTubeEmbedUrl } from '@/lib/storageManager.ts'
 import { useLandingContent } from './useLandingContent.ts'
@@ -122,29 +121,6 @@ const CLINICAL_DOMAINS = [
   },
 ] as const
 
-const getServiceFeatures = (title: string): string[] => {
-  const lower = title.toLowerCase()
-  if (lower.includes('bundl')) {
-    return [
-      'Asesmen MHCU komprehensif',
-      'Sesi penyampaian hasil (30 menit)',
-      'Sesi konseling individu daring (60 menit)',
-    ]
-  }
-  if (lower.includes('mhcu')) {
-    return [
-      'Asesmen kondisi psikologis terstruktur',
-      'Sesi pembahasan awal (30 menit)',
-      'Laporan analisis klinis dalam 2 minggu',
-    ]
-  }
-  return [
-    'Sesi konseling 1-on-1 (60 menit)',
-    'Daring atau tatap muka Pondok Bambu',
-    'Pendamping Soul Guidance atau Soul Expert',
-  ]
-}
-
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate()
   const { data: psychologists } = usePsychologists()
@@ -175,7 +151,6 @@ export const LandingPage: React.FC = () => {
 
   const [activePhraseIndex, setActivePhraseIndex] = useState(0)
   const [showMotionVideoModal, setShowMotionVideoModal] = useState(false)
-  const [showcaseTier, setShowcaseTier] = useState<ProfessionalTier>('Soul Guidance')
   const [activeBrochureImg, setActiveBrochureImg] = useState<string | null>(null)
   const [activeTopicTab, setActiveTopicTab] = useState<string>('emotion')
 
@@ -187,18 +162,7 @@ export const LandingPage: React.FC = () => {
   const activeQuickService = services.find((s) => s.id === quickServiceId) || services[0]
 
   const getQuickEstimate = (): number => {
-    if (!activeQuickService) return 110000
-    const lower = activeQuickService.title.toLowerCase()
-    const isExpert = quickTier === 'Soul Expert'
-    const isOffline = quickMethod === 'offline'
-
-    if (lower.includes('bundl')) {
-      return isExpert ? 329000 : 169000
-    }
-    if (lower.includes('mhcu')) {
-      return isExpert ? (isOffline ? 300000 : 179000) : isOffline ? 200000 : 89000
-    }
-    return isExpert ? (isOffline ? 500000 : 250000) : isOffline ? 350000 : 110000
+    return calculateServicePrice(activeQuickService, quickMethod, quickTier)
   }
 
   useEffect(() => {
@@ -1112,34 +1076,15 @@ export const LandingPage: React.FC = () => {
                 </span>
               </div>
               <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
-                Tiga Format <span className="italic text-plum-700">Layanan Konseling</span>
+                <span className="italic text-plum-700">Layanan Konseling</span>
               </h2>
               <p className="text-xs sm:text-sm text-ink-muted max-w-xl">
                 Transparansi biaya penuh tanpa biaya tersembunyi. Tersedia sesi daring (Google Meet) maupun tatap muka di klinik.
               </p>
             </div>
 
-            {/* Tier Switcher & Official Brochure Trigger */}
+            {/* Official Brochure Trigger */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center gap-1 bg-sanctuary-100 p-1 rounded-md border border-line">
-                {(['Soul Guidance', 'Soul Expert'] as const).map((tier) => (
-                  <button
-                    key={tier}
-                    type="button"
-                    onClick={() => setShowcaseTier(tier)}
-                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors cursor-pointer ${
-                      showcaseTier === tier
-                        ? tier === 'Soul Expert'
-                          ? 'bg-champagne-600 text-[#FBF7F0]'
-                          : 'bg-plum-800 text-[#FBF7F0]'
-                        : 'text-ink-muted hover:text-ink'
-                    }`}
-                  >
-                    {tier}
-                  </button>
-                ))}
-              </div>
-
               <Button
                 type="button"
                 variant="outline"
@@ -1153,34 +1098,16 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {services.map((svc) => {
               const lower = svc.title.toLowerCase()
               const isBundle = lower.includes('bundl')
-              const isMhcuOnly = lower.includes('mhcu') && !isBundle
-              const isExpert = showcaseTier === 'Soul Expert'
 
-              const priceOnline = isBundle
-                ? isExpert
-                  ? 329000
-                  : 169000
-                : isMhcuOnly
-                  ? isExpert
-                    ? 179000
-                    : 89000
-                  : isExpert
-                    ? 250000
-                    : 110000
-
-              const priceOffline = isBundle
-                ? null
-                : isMhcuOnly
-                  ? isExpert
-                    ? 300000
-                    : 200000
-                  : isExpert
-                    ? 500000
-                    : 350000
+              const priceOnline = svc.priceOnline ?? svc.price ?? 110000
+              const priceOffline =
+                svc.priceOffline !== null && svc.priceOffline !== undefined && svc.deliveryMethods?.includes('offline')
+                  ? svc.priceOffline
+                  : null
 
               return (
                 <Card
@@ -1200,10 +1127,10 @@ export const LandingPage: React.FC = () => {
                           </Badge>
                         ) : (
                           <Badge
-                            variant={isExpert ? 'warning' : 'default'}
-                            className="rounded-xs font-mono text-[9px] uppercase"
+                            variant="outline"
+                            className="rounded-xs font-mono text-[9px] uppercase text-ink-muted"
                           >
-                            {showcaseTier}
+                            {svc.deliveryMethods?.includes('offline') ? 'Online & Tatap Muka' : 'Khusus Online'}
                           </Badge>
                         )}
                         <span className="inline-flex items-center gap-1 text-[11px] font-mono text-ink-muted text-right">
@@ -1223,8 +1150,8 @@ export const LandingPage: React.FC = () => {
                       </p>
 
                       <ul className="space-y-2 border-t border-[#EDE6D9] pt-4">
-                        {getServiceFeatures(svc.title).map((feature) => (
-                          <li key={feature} className="flex items-start gap-2 text-xs text-ink-soft">
+                        {getServiceFeatures(svc).map((feature, fIdx) => (
+                          <li key={fIdx} className="flex items-start gap-2 text-xs text-ink-soft">
                             <CheckCircle2 className="w-3.5 h-3.5 text-plum-600 shrink-0 mt-0.5" />
                             <span>{feature}</span>
                           </li>
@@ -1257,7 +1184,7 @@ export const LandingPage: React.FC = () => {
                   </div>
 
                   <CardFooter className="p-6 pt-4 border-t border-[#EDE6D9]">
-                    <Link to={`/booking?service=${svc.id}&tier=${showcaseTier}`} className="w-full">
+                    <Link to={`/booking?service=${svc.id}`} className="w-full">
                       <Button
                         size="md"
                         className="w-full gap-2 rounded-sm bg-plum-900 hover:bg-plum-800 text-white font-semibold"
@@ -1327,96 +1254,6 @@ export const LandingPage: React.FC = () => {
 
       <FaqSection />
       <ContactSection />
-
-      {/* =====================================================================
-          WHY SOULAIDE — Editorial Value Pillars
-         ===================================================================== */}
-      <section className="border-t border-line">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="max-w-2xl mb-10 space-y-2 pb-4 border-b border-line">
-            <div className="flex items-center gap-3">
-              <span className="h-px w-8 bg-plum-600" aria-hidden="true" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
-                Komitmen Klinis
-              </span>
-            </div>
-            <h2 className="font-serif text-3xl sm:text-4xl text-ink leading-[1.08]">
-              Mengapa Memilih <span className="italic text-plum-700">Soulaide?</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-ink-muted">
-              Standar praktik psikologi profesional yang dibalut kehangatan, privasi medis, dan rasa aman.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-8">
-            <div className="border-t border-line pt-5 space-y-3">
-              <HeartHandshake className="w-5 h-5 text-plum-700" aria-hidden="true" />
-              <h3 className="text-sm font-bold text-ink">Psikolog Berizin SIPP</h3>
-              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
-                Didampingi langsung oleh psikolog klinis berlisensi (S.Psi., M.Psi.) yang terdaftar resmi di HIMPSI dan menjunjung tinggi kode etik profesi.
-              </p>
-            </div>
-
-            <div className="border-t border-line pt-5 space-y-3">
-              <ShieldCheck className="w-5 h-5 text-plum-700" aria-hidden="true" />
-              <h3 className="text-sm font-bold text-ink">Kerahasiaan Medis Terjamin</h3>
-              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
-                Catatan sesi dan laporan asesmen MHCU dilindungi kontrol otorisasi ketat dan hanya dapat dibuka oleh psikolog yang menangani Anda.
-              </p>
-            </div>
-
-            <div className="border-t border-line pt-5 space-y-3">
-              <MessageCircle className="w-5 h-5 text-champagne-600" aria-hidden="true" />
-              <h3 className="text-sm font-bold text-ink">Pilihan Sesi Fleksibel</h3>
-              <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
-                Pilih sesi daring (Google Meet) dari ruang pribadi Anda, atau tatap muka di ruang konsultasi tenang di Pondok Bambu, Jakarta Timur.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================================
-          CLOSING CTA — Dignified & Warm
-         ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-20">
-        <div className="rounded-xl bg-plum-900 p-8 sm:p-12 text-[#FBF7F0] border border-plum-800">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
-            <div className="lg:col-span-8 space-y-3">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-[0.16em] text-plum-200">
-                Mulai Perjalanan Anda
-              </span>
-              <h2 className="font-serif text-3xl sm:text-4xl leading-[1.08] text-[#FBF7F0]">
-                Anda tidak harus menghadapi semuanya{' '}
-                <span className="italic text-plum-200">sendirian.</span>
-              </h2>
-              <p className="text-sm text-[#D6C9D8] leading-relaxed max-w-xl">
-                Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan empati dan keahlian klinis.
-              </p>
-            </div>
-            <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-2.5 lg:items-stretch">
-              <Link to="/booking">
-                <Button
-                  size="lg"
-                  className="w-full bg-[#FBF7F0] text-plum-900 hover:bg-white gap-2 font-semibold rounded-sm"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Reservasi Sesi Sekarang</span>
-                </Button>
-              </Link>
-              <a href="#kontak">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full border-white/25 text-[#FBF7F0] hover:bg-white/10 hover:border-white/40 rounded-sm"
-                >
-                  Konsultasi via WhatsApp
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

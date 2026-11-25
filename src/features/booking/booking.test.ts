@@ -7,6 +7,7 @@ import {
   MINIMUM_LEAD_TIME_HOURS,
   RESCHEDULE_MIN_LEAD_HOURS,
 } from './availability.ts'
+import { calculateServicePrice, fallbackServices } from '@/features/services/useServices.ts'
 
 describe('Booking Lead Time Policy Validation', () => {
   it('rejects bookings with less than 24 hours lead time', () => {
@@ -110,5 +111,33 @@ describe('Revised Services & Professional Tiers (Soul Guidance vs Soul Expert)',
 
     expect(getTier(seniorExperience)).toBe('Soul Expert')
     expect(getTier(associateExperience)).toBe('Soul Guidance')
+  })
+
+  it('calculates booking service prices dynamically from database service properties', () => {
+    const individualService = fallbackServices.find((s) => s.id === 'e1000000-0000-0000-0000-000000000001')!
+    expect(individualService).toBeDefined()
+
+    // Default base prices from database service model
+    const priceOnlineGuidance = calculateServicePrice(individualService, 'online', 'Soul Guidance')
+    const priceOfflineGuidance = calculateServicePrice(individualService, 'offline', 'Soul Guidance')
+    expect(priceOnlineGuidance).toBe(individualService.priceOnline)
+    expect(priceOfflineGuidance).toBe(individualService.priceOffline)
+
+    // Dynamic price calculation when admin updates service pricing in database model
+    const updatedService = {
+      ...individualService,
+      priceOnline: 135000,
+      priceOffline: 400000,
+    }
+    const revisedOnline = calculateServicePrice(updatedService, 'online', 'Soul Guidance')
+    const revisedOffline = calculateServicePrice(updatedService, 'offline', 'Soul Guidance')
+    expect(revisedOnline).toBe(135000)
+    expect(revisedOffline).toBe(400000)
+
+    // Soul Expert tier retains the exact database service pricing without price inflation
+    const expertOnline = calculateServicePrice(updatedService, 'online', 'Soul Expert')
+    const expertOffline = calculateServicePrice(updatedService, 'offline', 'Soul Expert')
+    expect(expertOnline).toBe(135000)
+    expect(expertOffline).toBe(400000)
   })
 })

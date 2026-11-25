@@ -18,6 +18,8 @@ import {
   Phone,
   Upload,
   Trash2,
+  Search,
+  Filter,
 } from 'lucide-react';
 import type { AdminStaffItem } from './types';
 import type { UserRole } from '@/types';
@@ -40,6 +42,29 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Role Filter & Search State
+  const [selectedRole, setSelectedRole] = useState<'all' | UserRole>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Role Counts & Filtered Staff
+  const roleCounts = {
+    all: staffMembers.length,
+    super_admin: staffMembers.filter((s) => s.role === 'super_admin').length,
+    admin: staffMembers.filter((s) => s.role === 'admin').length,
+    psychologist: staffMembers.filter((s) => s.role === 'psychologist').length,
+    customer: staffMembers.filter((s) => s.role === 'customer').length,
+  };
+
+  const filteredStaff = staffMembers.filter((staff) => {
+    const matchesRole = selectedRole === 'all' || staff.role === selectedRole;
+    const matchesSearch =
+      !searchQuery.trim() ||
+      staff.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (staff.email && staff.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (staff.phone_number && staff.phone_number.includes(searchQuery));
+    return matchesRole && matchesSearch;
+  });
 
   // Add Staff Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -257,11 +282,10 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
 
       {/* Super Admin Notice */}
       <div
-        className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
-          isSuperAdmin
-            ? 'bg-purple-50/70 border-purple-200 text-purple-900'
-            : 'bg-amber-50 border-amber-200 text-amber-900'
-        }`}
+        className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${isSuperAdmin
+          ? 'bg-purple-50/70 border-purple-200 text-purple-900'
+          : 'bg-amber-50 border-amber-200 text-amber-900'
+          }`}
       >
         <Shield className="w-5 h-5 shrink-0 mt-0.5 text-purple-700" />
         <div className="space-y-1">
@@ -278,6 +302,99 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
         </div>
       </div>
 
+      {/* Ringkasan & Filter Cepat per Role */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedRole('all');
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedRole === 'all'
+              ? 'bg-plum-900 text-white border-plum-900 shadow-sm ring-2 ring-plum-500/20'
+              : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
+          }`}
+        >
+          <p className={`text-[11px] font-medium ${selectedRole === 'all' ? 'text-plum-200' : 'text-slate-500'}`}>
+            Semua Pengguna
+          </p>
+          <p className="text-xl font-bold mt-0.5">{roleCounts.all}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedRole('super_admin');
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedRole === 'super_admin'
+              ? 'bg-purple-900 text-white border-purple-900 shadow-sm ring-2 ring-purple-500/20'
+              : 'bg-white hover:bg-purple-50/50 border-purple-100 text-purple-950'
+          }`}
+        >
+          <p className={`text-[11px] font-medium ${selectedRole === 'super_admin' ? 'text-purple-200' : 'text-purple-700'}`}>
+            Super Admin
+          </p>
+          <p className="text-xl font-bold mt-0.5">{roleCounts.super_admin}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedRole('admin');
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedRole === 'admin'
+              ? 'bg-plum-900 text-white border-plum-900 shadow-sm ring-2 ring-plum-500/20'
+              : 'bg-white hover:bg-plum-50/50 border-plum-100 text-plum-950'
+          }`}
+        >
+          <p className={`text-[11px] font-medium ${selectedRole === 'admin' ? 'text-plum-200' : 'text-plum-700'}`}>
+            Admin Operasional
+          </p>
+          <p className="text-xl font-bold mt-0.5">{roleCounts.admin}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedRole('psychologist');
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedRole === 'psychologist'
+              ? 'bg-emerald-900 text-white border-emerald-900 shadow-sm ring-2 ring-emerald-500/20'
+              : 'bg-white hover:bg-emerald-50/50 border-emerald-100 text-emerald-950'
+          }`}
+        >
+          <p className={`text-[11px] font-medium ${selectedRole === 'psychologist' ? 'text-emerald-200' : 'text-emerald-700'}`}>
+            Psikolog Klinis
+          </p>
+          <p className="text-xl font-bold mt-0.5">{roleCounts.psychologist}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedRole('customer');
+            setCurrentPage(1);
+          }}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+            selectedRole === 'customer'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-500/20'
+              : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
+          }`}
+        >
+          <p className={`text-[11px] font-medium ${selectedRole === 'customer' ? 'text-slate-300' : 'text-slate-500'}`}>
+            Klien (Customer)
+          </p>
+          <p className="text-xl font-bold mt-0.5">{roleCounts.customer}</p>
+        </button>
+      </div>
+
       <Card className="border-slate-200 shadow-sm overflow-hidden">
         <CardHeader className="bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5">
           <div className="flex items-center gap-2">
@@ -287,7 +404,7 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
                 Direktori Staf & Otoritas Sistem
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Total {staffMembers.length} staf dan akun terdaftar di sistem Soulaide.
+                Menampilkan {filteredStaff.length} dari {staffMembers.length} akun terdaftar di sistem Soulaide.
               </p>
             </div>
           </div>
@@ -302,11 +419,150 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
           </button>
         </CardHeader>
 
-        {staffMembers.length === 0 ? (
+        {/* Toolbar Filter Role & Search */}
+        <div className="p-4 bg-slate-50/40 border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1 hidden sm:inline-block" />
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('all');
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all shrink-0 cursor-pointer ${
+                selectedRole === 'all'
+                  ? 'bg-plum-900 text-white shadow-2xs'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Semua ({roleCounts.all})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('super_admin');
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all shrink-0 cursor-pointer ${
+                selectedRole === 'super_admin'
+                  ? 'bg-purple-900 text-white shadow-2xs'
+                  : 'bg-white text-purple-800 hover:bg-purple-50 border border-purple-200'
+              }`}
+            >
+              Super Admin ({roleCounts.super_admin})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('admin');
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all shrink-0 cursor-pointer ${
+                selectedRole === 'admin'
+                  ? 'bg-plum-900 text-white shadow-2xs'
+                  : 'bg-white text-plum-800 hover:bg-plum-50 border border-plum-200'
+              }`}
+            >
+              Admin ({roleCounts.admin})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('psychologist');
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all shrink-0 cursor-pointer ${
+                selectedRole === 'psychologist'
+                  ? 'bg-emerald-900 text-white shadow-2xs'
+                  : 'bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-200'
+              }`}
+            >
+              Psikolog ({roleCounts.psychologist})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRole('customer');
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all shrink-0 cursor-pointer ${
+                selectedRole === 'customer'
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              Klien ({roleCounts.customer})
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Cari nama, email, no. telp..."
+                className="w-full pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-plum-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {(selectedRole !== 'all' || searchQuery.trim()) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRole('all');
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="text-xs text-plum-700 hover:text-plum-900 underline font-medium whitespace-nowrap cursor-pointer px-1"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+        </div>
+
+        {filteredStaff.length === 0 ? (
           <div className="p-6">
             <EmptyState
-              title="Tidak ada data staf"
-              message="Daftar role pengguna terdaftar akan tampil di sini."
+              title={
+                staffMembers.length === 0
+                  ? 'Tidak ada data staf'
+                  : 'Tidak ada data yang cocok dengan filter'
+              }
+              message={
+                staffMembers.length === 0
+                  ? 'Daftar role pengguna terdaftar akan tampil di sini.'
+                  : 'Coba ubah filter role atau kata kunci pencarian Anda.'
+              }
+              action={
+                staffMembers.length > 0 && (selectedRole !== 'all' || searchQuery.trim()) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole('all');
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-plum-900 bg-plum-100 hover:bg-plum-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Reset Semua Filter
+                  </button>
+                ) : undefined
+              }
             />
           </div>
         ) : (
@@ -324,7 +580,7 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {staffMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((staff) => (
+                {filteredStaff.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((staff) => (
                   <tr key={staff.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-slate-900">
                       <div className="flex items-center gap-2.5">
@@ -399,10 +655,10 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
           </div>
         )}
 
-        {staffMembers.length > 0 && (
+        {filteredStaff.length > 0 && (
           <Pagination
             currentPage={currentPage}
-            totalItems={staffMembers.length}
+            totalItems={filteredStaff.length}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}

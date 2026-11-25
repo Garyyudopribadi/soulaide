@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { deleteManagedAsset } from '@/lib/storageManager';
 import type {
   AdminBookingItem,
   AdminPaymentItem,
@@ -39,7 +40,7 @@ export const adminService = {
       pendingPayments,
       totalRevenue,
       verifiedPsychologists: psychsRes.count || 4,
-      activeServices: servicesRes.count || 4,
+      activeServices: (servicesRes.count !== null && servicesRes.count !== undefined && servicesRes.count > 0) ? servicesRes.count : 3,
     };
   },
 
@@ -110,11 +111,11 @@ export const adminService = {
         },
         payment: pay
           ? {
-              id: pay.id,
-              amount: Number(pay.amount),
-              status: pay.status as PaymentStatus,
-              midtrans_order_id: pay.midtrans_order_id,
-            }
+            id: pay.id,
+            amount: Number(pay.amount),
+            status: pay.status as PaymentStatus,
+            midtrans_order_id: pay.midtrans_order_id,
+          }
           : null,
       };
     });
@@ -439,10 +440,26 @@ export const adminService = {
    * Delete staff member / revoke staff authority
    */
   async deleteStaffMember(roleRecordId: string, userId: string, staffName: string): Promise<void> {
+    // 1. Delete any avatar image from storage bucket if exists
+    try {
+      const { data: prof } = await supabase
+        .from('Soulaide_profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (prof?.avatar_url) {
+        await deleteManagedAsset(prof.avatar_url);
+      }
+    } catch (e) {
+      console.warn('Storage cleanup note:', e);
+    }
+
+    // 2. Delete role record from Soulaide_user_roles table
     const { error } = await supabase
       .from('Soulaide_user_roles')
       .delete()
-      .eq('id', roleRecordId);
+      .or(`id.eq.${roleRecordId},user_id.eq.${userId}`);
 
     if (error) {
       throw new Error(`Gagal menghapus data otoritas staf: ${error.message}`);

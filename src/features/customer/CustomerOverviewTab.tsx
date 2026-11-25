@@ -139,7 +139,7 @@ export const CustomerOverviewTab: React.FC<CustomerOverviewTabProps> = ({
       key: 'payment',
       count: pendingPayments.length,
       title: 'Selesaikan pembayaran sesi',
-      description: 'Invoice Midtrans masih menunggu pembayaran agar jadwal Anda terkonfirmasi.',
+      description: 'Invoice pembayaran masih menunggu pelunasan agar jadwal Anda terkonfirmasi.',
       icon: Wallet,
       tone: 'amber',
       onClick: () => onNavigateTab('payments'),

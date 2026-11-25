@@ -48,7 +48,7 @@ export const AdminDashboardPage: React.FC = () => {
       pendingPayments: 0,
       totalRevenue: 0,
       verifiedPsychologists: 4,
-      activeServices: 4,
+      activeServices: 3,
     },
     isLoading: loadingKpis,
     refetch: refetchKpis,

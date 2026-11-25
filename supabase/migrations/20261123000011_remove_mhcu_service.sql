@@ -1,8 +1,12 @@
 -- Migration: 20261123000011_remove_mhcu_service.sql
--- Description: Sinkronisasi 3 layanan resmi Soulaide:
+-- Description: Sinkronisasi 3 layanan resmi Soulaide dengan valid RFC 4122 hex UUIDs:
 -- 1. Layanan Konseling Individu (1 Sesi Konseling/60 Menit)
 -- 2. Layanan MHCU (Mental Health Check Up) (Asesmen+1 Sesi Konseling/30 Menit)
 -- 3. Bundling MHCU+Konseling Individu Online (Asesmen+1 Sesi Penyampaian Hasil MHCU/30 Menit+1 Sesi Konseling/60 Menit)
+
+INSERT INTO public."Soulaide_service_categories" (id, name, slug, description)
+VALUES ('c1000000-0000-0000-0000-000000000001', 'Soul Guidance', 'soul-guidance', 'Layanan bimbingan dan konseling psikologis')
+ON CONFLICT (slug) DO NOTHING;
 
 UPDATE public."Soulaide_services"
 SET is_active = FALSE
@@ -12,7 +16,7 @@ INSERT INTO public."Soulaide_services" (
   id, category_id, name, slug, description, duration_minutes, delivery_methods, price_online, price_offline, is_active
 ) VALUES
   (
-    's1000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000001',
     'c1000000-0000-0000-0000-000000000001',
     'Layanan Konseling Individu',
     'individual-counseling',
@@ -24,7 +28,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's2000000-0000-0000-0000-000000000002',
+    'e2000000-0000-0000-0000-000000000002',
     'c1000000-0000-0000-0000-000000000001',
     'Layanan MHCU (Mental Health Check Up)',
     'mhcu',
@@ -36,7 +40,7 @@ INSERT INTO public."Soulaide_services" (
     TRUE
   ),
   (
-    's3000000-0000-0000-0000-000000000003',
+    'e3000000-0000-0000-0000-000000000003',
     'c1000000-0000-0000-0000-000000000001',
     'Bundling MHCU+Konseling Individu Online',
     'bundle-packet',

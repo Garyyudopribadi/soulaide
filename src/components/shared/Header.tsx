@@ -17,16 +17,20 @@ import { useAuth } from '@/features/auth/useAuth.ts'
 import { getRoleDashboardPath } from '@/features/auth/auth-context.ts'
 import { getAssetUrl, handleImageFallback } from '@/lib/utils.ts'
 import { useLandingContent } from '@/features/public-site/useLandingContent.ts'
+import { useServices } from '@/features/services/useServices.ts'
 
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user, profile, role, signOut } = useAuth()
   const { data: landingContent } = useLandingContent()
+  const { data: services = [] } = useServices()
   const topBar = landingContent.top_bar
   const hero = landingContent.hero
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState<string>('')
+
+  const serviceCount = services.length > 0 ? String(services.length) : '3'
 
   // Scroll listener for micro-bar collapse and robust scroll spy for active section
   useEffect(() => {
@@ -64,7 +68,7 @@ export const Header: React.FC = () => {
   const navLinks = [
     { label: 'Beranda', to: '/#' },
     { label: 'Psikolog', to: '/#psikolog' },
-    { label: 'Layanan', to: '/#layanan', badge: '3' },
+    { label: 'Layanan', to: '/#layanan', badge: serviceCount },
     { label: 'FAQ', to: '/#faq' },
     { label: 'Kontak', to: '/#kontak' },
   ]
@@ -126,30 +130,18 @@ export const Header: React.FC = () => {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-0 sm:h-9 flex flex-col sm:flex-row items-center justify-between gap-y-1 sm:gap-y-0 text-[11px] tracking-normal">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1.5 font-medium text-plum-100">
-              <ShieldCheck className="w-3.5 h-3.5 text-plum-300 shrink-0" />
-              <span>{topBar.code_of_ethics}</span>
-            </span>
-            <span className="hidden md:inline text-plum-400/50 font-light" aria-hidden="true">|</span>
-            <span className="inline-flex items-center gap-1.5 text-plum-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-              <span>{topBar.service_session}</span>
-            </span>
+          <div className="flex items-center justify-center sm:justify-start gap-x-2 text-plum-200">
+            <Clock className="w-3.5 h-3.5 text-plum-400 shrink-0" />
+            <span>{topBar.schedule || 'Senin–Sabtu, sesuai perjanjian'}</span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 text-plum-200">
-            <span className="inline-flex items-center gap-1.5 text-plum-300">
-              <Clock className="w-3 h-3 text-plum-400 shrink-0" />
-              <span>{topBar.schedule}</span>
-            </span>
-            <span className="hidden sm:inline text-plum-400/50 font-light" aria-hidden="true">|</span>
+          <div className="flex items-center justify-center sm:justify-end gap-x-2 text-plum-200">
             <a
               href={`tel:${topBar.crisis_phone || '119'}`}
               className="inline-flex items-center gap-1.5 text-champagne-200 hover:text-white font-medium transition-colors"
             >
-              <Phone className="w-3 h-3 text-champagne-400 shrink-0" />
-              <span>Hotline Krisis: <strong className="font-semibold text-white tracking-wide">{topBar.crisis_hotline}</strong></span>
+              <Phone className="w-3.5 h-3.5 text-champagne-400 shrink-0" />
+              <span>Hotline Krisis: <strong className="font-semibold text-white tracking-wide">{topBar.crisis_hotline || '119'}</strong></span>
             </a>
           </div>
         </div>
@@ -326,7 +318,14 @@ export const Header: React.FC = () => {
                       : 'text-[#4B3F59] hover:bg-sanctuary-100'
                   }`}
                 >
-                  <span>{link.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span>{link.label}</span>
+                    {link.badge && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full font-bold leading-tight bg-plum-100 text-plum-700">
+                        {link.badge}
+                      </span>
+                    )}
+                  </div>
                   {isActive && <span className="w-1.5 h-1.5 rounded-full bg-plum-700" />}
                 </Link>
               )

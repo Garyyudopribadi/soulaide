@@ -13,6 +13,7 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage.tsx'
 import { UnauthorizedPage } from '@/features/auth/UnauthorizedPage.tsx'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute.tsx'
 import { BookingPage } from '@/features/booking/BookingPage.tsx'
+import { OrderStatusPage } from '@/features/payments/OrderStatusPage.tsx'
 import { CustomerDashboardPage } from '@/features/customer/CustomerDashboardPage.tsx'
 import { PsychologistDashboardPage } from '@/features/psychologist/PsychologistDashboardPage.tsx'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage.tsx'
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: 'reset-password', element: <ResetPasswordPage /> },
       { path: 'unauthorized', element: <UnauthorizedPage /> },
       { path: 'booking', element: <BookingPage /> },
+      { path: 'order/:id', element: <OrderStatusPage /> },
       {
         path: 'dashboard/*',
         element: (

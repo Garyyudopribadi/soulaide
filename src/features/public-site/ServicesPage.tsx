@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button.tsx'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
-import { useServices } from '@/features/services/useServices.ts'
+import { useServices, calculateServicePrice, getServiceFeatures } from '@/features/services/useServices.ts'
 import { formatIDR, getAssetUrl } from '@/lib/utils.ts'
 import type { ProfessionalTier } from '@/types/index.ts'
 
@@ -49,22 +49,12 @@ export const ServicesPage: React.FC = () => {
     method: 'online' | 'offline',
     tier: ProfessionalTier
   ): number | null => {
-    const isExpert = tier === 'Soul Expert'
-    const lower = svc.title.toLowerCase()
-    if (lower.includes('bundl')) {
-      if (method === 'offline') return null
-      return isExpert ? 329000 : 169000
+    if (method === 'offline') {
+      if (svc.priceOffline === null || svc.priceOffline === undefined || !svc.deliveryMethods?.includes('offline')) {
+        return null
+      }
     }
-    if (lower.includes('mhcu')) {
-      if (isExpert) return method === 'offline' ? 300000 : 179000
-      return method === 'offline' ? 200000 : 89000
-    }
-    if (lower.includes('individu')) {
-      if (isExpert) return method === 'offline' ? 500000 : 250000
-      return method === 'offline' ? 350000 : 110000
-    }
-    const base = method === 'offline' ? (svc.priceOffline || 350000) : (svc.priceOnline || svc.price || 110000)
-    return isExpert ? base + 150000 : base
+    return calculateServicePrice(svc, method, tier)
   }
 
   const getServiceBrochure = (title: string): string => {
@@ -72,39 +62,6 @@ export const ServicesPage: React.FC = () => {
     if (lower.includes('bundl') || lower.includes('mhcu')) return getAssetUrl('/layanan/Konseling Mental Health Check Up.webp')
     if (lower.includes('individu')) return getAssetUrl('/layanan/Konseling Individu.webp')
     return getAssetUrl('/Layanan Kesehatan Mental.webp')
-  }
-
-  const getServiceFeatures = (title: string): string[] => {
-    const lower = title.toLowerCase()
-    if (lower.includes('bundl')) {
-      return [
-        'Asesmen MHCU komprehensif',
-        '1 Sesi Penyampaian Hasil MHCU (30 Menit)',
-        '1 Sesi Konseling Individu Online (60 Menit)',
-        'Paket Best Value paling hemat & menyeluruh',
-      ]
-    }
-    if (lower.includes('mhcu')) {
-      return [
-        'Asesmen kondisi psikologis & tingkat stres terstruktur',
-        '1 Sesi Konseling pembahasan awal (30 Menit)',
-        'Gambaran emosional & rekomendasi awal objektif',
-        'Laporan analisis klinis resmi dalam 2 minggu',
-      ]
-    }
-    if (lower.includes('individu')) {
-      return [
-        '1 Sesi Konseling 1-on-1 selama 60 Menit',
-        'Tersedia Daring (Google Meet) & Tatap Muka',
-        'Ruang aman empatik tanpa penghakiman',
-        'Pilihan pendamping Soul Guidance atau Soul Expert',
-      ]
-    }
-    return [
-      'Pendampingan oleh psikolog terverifikasi SIPP',
-      'Format sesi fleksibel (Online / Tatap Muka)',
-      'Kerahasiaan data terjamin sesuai etika klinis',
-    ]
   }
 
   return (
@@ -302,7 +259,7 @@ export const ServicesPage: React.FC = () => {
         {/* 3 Canonical Services Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
           {filteredServices.map((svc) => {
-            const features = getServiceFeatures(svc.title)
+            const features = getServiceFeatures(svc)
             const isBundle = svc.title.toLowerCase().includes('bundl')
             const onlinePrice = getTierPrice(svc, 'online', previewTier)
             const offlinePrice = getTierPrice(svc, 'offline', previewTier)

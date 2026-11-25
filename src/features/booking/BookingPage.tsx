@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import {
   Clock,
+  Check,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
@@ -16,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button.tsx'
 import { Card, CardContent } from '@/components/ui/card.tsx'
 import { Badge } from '@/components/ui/badge.tsx'
-import { useServices } from '@/features/services/useServices.ts'
+import { useServices, calculateServicePrice, getServiceFeatures } from '@/features/services/useServices.ts'
 import { usePsychologists } from '@/features/psychologists/usePsychologists.ts'
 import { useAuth } from '@/features/auth/useAuth.ts'
 import {
@@ -77,41 +78,23 @@ export const BookingPage: React.FC = () => {
     tierPsychologists[0] ||
     psychologists[0]
 
-  const selectedService = services.find((s) => s.id === selectedServiceId) || services[0]
+  const selectedService =
+    services.find(
+      (s) =>
+        s.id === selectedServiceId ||
+        (selectedServiceId.startsWith('s') && s.id === 'e' + selectedServiceId.slice(1)) ||
+        s.title.toLowerCase().includes(selectedServiceId.toLowerCase())
+    ) || services[0]
 
-  // Check if active service supports offline
-  const isBundle = selectedService?.title.toLowerCase().includes('bundl')
-  const supportsOffline = Boolean(selectedService?.deliveryMethods?.includes('offline')) && !isBundle
+  // Check if active service supports offline directly from database columns
+  const supportsOffline = Boolean(
+    selectedService?.deliveryMethods?.includes('offline') &&
+    selectedService?.priceOffline !== null &&
+    selectedService?.priceOffline !== undefined
+  )
   const effectiveMethod = !supportsOffline && deliveryMethod === 'offline' ? 'online' : deliveryMethod
 
-  const getServicePrice = (
-    svc: typeof services[0] | undefined,
-    method: DeliveryMethod,
-    tier: ProfessionalTier
-  ): number => {
-    if (!svc) return 0
-    const isExpert = tier === 'Soul Expert'
-    const isOffline = method === 'offline'
-
-    const lower = svc.title.toLowerCase()
-    if (lower.includes('bundl')) {
-      if (isExpert) return isOffline ? 650000 : 329000
-      return isOffline ? 450000 : 169000
-    }
-    if (lower.includes('mhcu')) {
-      if (isExpert) return isOffline ? 300000 : 179000
-      return isOffline ? 200000 : 89000
-    }
-    if (lower.includes('individu')) {
-      if (isExpert) return isOffline ? 500000 : 250000
-      return isOffline ? 350000 : 110000
-    }
-
-    const base = isOffline ? (svc.priceOffline || 350000) : (svc.priceOnline || svc.price || 110000)
-    return isExpert ? base + 150000 : base
-  }
-
-  const calculatedPrice = getServicePrice(selectedService, effectiveMethod, selectedTier)
+  const calculatedPrice = calculateServicePrice(selectedService, effectiveMethod, selectedTier)
 
   const handleSelectTime = (time: string) => {
     setSelectedTime(time)
@@ -331,16 +314,20 @@ export const BookingPage: React.FC = () => {
                         </span>
                         <span>Format Layanan Konseling</span>
                       </label>
-                      <span className="text-[11px] text-[#72677E]">3 Layanan Resmi</span>
+                      <span className="text-[11px] text-[#72677E]">{services.length} Format Layanan</span>
                     </div>
 
                     <div className="space-y-2.5">
                       {services.map((svc) => {
-                        const isSelected = selectedServiceId === svc.id
-                        const price = getServicePrice(svc, effectiveMethod, selectedTier)
+                        const isSelected = selectedService?.id === svc.id
+                        const price = calculateServicePrice(svc, effectiveMethod, selectedTier)
+                        const svcSupportsOffline = Boolean(
+                          svc.deliveryMethods?.includes('offline') &&
+                          svc.priceOffline !== null &&
+                          svc.priceOffline !== undefined
+                        )
                         const lower = svc.title.toLowerCase()
                         const isBundleItem = lower.includes('bundl')
-                        const isMhcuItem = lower.includes('mhcu') && !isBundleItem
 
                         return (
                           <button
@@ -348,28 +335,48 @@ export const BookingPage: React.FC = () => {
                             type="button"
                             onClick={() => {
                               setServiceIdState(svc.id)
-                              if (isBundleItem) setDeliveryMethod('online')
+                              if (!svcSupportsOffline && deliveryMethod === 'offline') {
+                                setDeliveryMethod('online')
+                              }
                             }}
-                            className={`w-full p-3.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isSelected
+                            className={`w-full p-3.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isSelected
                                 ? 'border-plum-700 bg-plum-50/70 ring-1 ring-plum-700 shadow-xs'
                                 : 'border-line hover:border-plum-300 bg-paper-card'
                               }`}
                           >
-                            <div className="space-y-1 max-w-md">
-                              <div className="flex items-center gap-2">
+                            <div className="space-y-1.5 max-w-md">
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 <span className="text-xs font-bold text-[#1E1429]">{svc.title}</span>
                                 {isBundleItem && (
                                   <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-xs bg-plum-800 text-white">
                                     Paket Lengkap
                                   </span>
                                 )}
+                                {svcSupportsOffline ? (
+                                  <Badge variant="outline" className="text-[9px] py-0 px-1.5 rounded-xs font-normal">
+                                    Online &amp; Tatap Muka
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-[9px] py-0 px-1.5 rounded-xs font-normal">
+                                    Khusus Online
+                                  </Badge>
+                                )}
                               </div>
-                              <p className="text-[11px] text-[#645A70] line-clamp-1">{svc.description}</p>
+                              <p className="text-[11px] text-[#645A70] line-clamp-2 leading-relaxed">{svc.description}</p>
+                              <ul className="pt-1.5 space-y-1">
+                                {getServiceFeatures(svc).map((point, pIdx) => (
+                                  <li key={pIdx} className="text-[10px] text-plum-900/90 flex items-center gap-1.5">
+                                    <Check className="w-2.5 h-2.5 text-plum-700 shrink-0" />
+                                    <span className="line-clamp-1">{point}</span>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
 
-                            <div className="flex items-center sm:flex-col sm:items-end justify-between gap-1 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-line">
-                              <span className="text-[10px] font-mono font-semibold text-plum-700">
-                                {isBundleItem ? '90 Menit' : isMhcuItem ? 'Asesmen + 30m' : '60 Menit'}
+                            <div className="flex items-center sm:flex-col sm:items-end justify-between gap-1 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-line">
+                              <span className="text-[10px] font-mono font-semibold text-plum-700 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-plum-500 shrink-0" />
+                                <span>{svc.duration}</span>
                               </span>
                               <span className="text-xs font-extrabold text-[#1E1429] tabular-nums">
                                 {formatIDR(price)}
@@ -383,51 +390,72 @@ export const BookingPage: React.FC = () => {
 
                   {/* STEP 3: Modality Selection */}
                   <div className="space-y-3 pt-4 border-t border-line">
-                    <label className="text-xs font-mono font-bold uppercase tracking-[0.12em] text-[#3C3148] flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-xs bg-plum-100 text-plum-800 flex items-center justify-center text-[10px] font-bold">
-                        03
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono font-bold uppercase tracking-[0.12em] text-[#3C3148] flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-xs bg-plum-100 text-plum-800 flex items-center justify-center text-[10px] font-bold">
+                          03
+                        </span>
+                        <span>Metode Pelaksanaan Sesi</span>
+                      </label>
+                      <span className="text-[11px] text-[#72677E]">
+                        {supportsOffline ? '2 Metode Tersedia' : '1 Metode (Khusus Online)'}
                       </span>
-                      <span>Metode Pelaksanaan Sesi</span>
-                    </label>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setDeliveryMethod('online')}
-                        className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer ${effectiveMethod === 'online'
+                        className={`p-3.5 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between ${effectiveMethod === 'online'
                             ? 'border-plum-700 bg-plum-50/70 ring-1 ring-plum-700 shadow-xs'
                             : 'border-line hover:border-plum-300 bg-paper-card'
                           }`}
                       >
-                        <div className="flex items-center gap-2 mb-1">
-                          <Video className="w-4 h-4 text-plum-700" />
-                          <p className="font-bold text-xs text-[#1E1429]">Sesi Daring (Online)</p>
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <Video className="w-4 h-4 text-plum-700" />
+                              <p className="font-bold text-xs text-[#1E1429]">Sesi Daring (Online)</p>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-plum-900 font-mono tabular-nums">
+                              {formatIDR(calculateServicePrice(selectedService, 'online', selectedTier))}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#645A70] leading-relaxed">
+                            Konseling privat via Google Meet berenkripsi dari kenyamanan ruang Anda.
+                          </p>
                         </div>
-                        <p className="text-[11px] text-[#645A70] leading-relaxed">
-                          Konseling privat via Google Meet berenkripsi dari kenyamanan ruang Anda.
-                        </p>
                       </button>
 
                       <button
                         type="button"
                         disabled={!supportsOffline}
                         onClick={() => supportsOffline && setDeliveryMethod('offline')}
-                        className={`p-3.5 rounded-lg border text-left transition-all ${!supportsOffline
+                        className={`p-3.5 rounded-lg border text-left transition-all flex flex-col justify-between ${!supportsOffline
                             ? 'border-line/40 bg-gray-100/60 text-gray-400 cursor-not-allowed opacity-60'
                             : effectiveMethod === 'offline'
                               ? 'border-plum-700 bg-plum-50/70 ring-1 ring-plum-700 shadow-xs cursor-pointer'
                               : 'border-line hover:border-plum-300 bg-paper-card cursor-pointer'
                           }`}
                       >
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="w-4 h-4 text-plum-700" />
-                          <p className="font-bold text-xs text-[#1E1429]">Tatap Muka (Offline)</p>
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-plum-700" />
+                              <p className="font-bold text-xs text-[#1E1429]">Tatap Muka (Offline)</p>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-plum-900 font-mono tabular-nums">
+                              {supportsOffline
+                                ? formatIDR(calculateServicePrice(selectedService, 'offline', selectedTier))
+                                : 'Tidak Tersedia'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#645A70] leading-relaxed">
+                            {!supportsOffline
+                              ? `Layanan "${selectedService?.title || 'ini'}" hanya tersedia dalam format Daring (Online).`
+                              : 'Klinik tenang di Pondok Bambu, Duren Sawit, Jakarta Timur.'}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-[#645A70] leading-relaxed">
-                          {!supportsOffline
-                            ? 'Paket Bundling hanya tersedia secara Daring (Online).'
-                            : 'Klinik tenang di Pondok Bambu, Duren Sawit, Jakarta Timur.'}
-                        </p>
                       </button>
                     </div>
                   </div>
@@ -595,7 +623,28 @@ export const BookingPage: React.FC = () => {
                       <Badge variant="secondary" className="text-[10px] rounded-xs">
                         {effectiveMethod === 'offline' ? 'Tatap Muka' : 'Daring (Online)'}
                       </Badge>
+                      {selectedService?.duration && (
+                        <span className="text-[10px] text-plum-700 font-mono font-medium inline-flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-plum-500" />
+                          <span>{selectedService.duration}</span>
+                        </span>
+                      )}
                     </div>
+                    {selectedService && (
+                      <div className="pt-2 border-t border-line/60">
+                        <span className="text-[10px] text-[#8E81A1] uppercase tracking-wider font-semibold block mb-1">
+                          Cakupan &amp; Poin Layanan
+                        </span>
+                        <ul className="space-y-1">
+                          {getServiceFeatures(selectedService).map((feat, fIdx) => (
+                            <li key={fIdx} className="text-[11px] text-[#645A70] flex items-start gap-1.5">
+                              <Check className="w-3 h-3 text-plum-700 shrink-0 mt-0.5" />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Selected Psychologist */}
@@ -670,7 +719,7 @@ export const BookingPage: React.FC = () => {
 
                   <div className="flex items-center gap-2 text-[11px] text-[#72677E] pt-1">
                     <ShieldCheck className="w-4 h-4 text-plum-700 shrink-0" />
-                    <span>Pembayaran aman via Midtrans &amp; Kode Etik HIMPSI.</span>
+                    <span>Pembayaran aman via QRISGate (QRIS &amp; Transfer Bank) &amp; Kode Etik HIMPSI.</span>
                   </div>
                 </CardContent>
               </Card>
@@ -743,7 +792,7 @@ export const BookingPage: React.FC = () => {
                 className="w-full sm:w-auto gap-2 h-11 px-6 rounded-lg bg-plum-700 hover:bg-plum-800 text-white"
               >
                 <CreditCard className="w-4 h-4 text-plum-200" />
-                <span>Bayar Sekarang via Midtrans</span>
+                <span>Bayar Sekarang via QRIS / Bank Transfer</span>
               </Button>
             </div>
 

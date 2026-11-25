@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fallbackServices } from '@/features/services/useServices.ts'
 import { initialPsychologists } from '@/features/psychologists/data.ts'
 import { fallbackFaqs } from '@/features/public-site/useFaqs.ts'
+import { defaultLandingContent } from '@/features/public-site/landingContentService.ts'
 
 describe('Public Site Data & Business Rules', () => {
   it('contains the 3 canonical services (Konseling Individu, MHCU, Bundling MHCU+Konseling Individu Online)', () => {
@@ -63,5 +64,39 @@ describe('Public Site Data & Business Rules', () => {
     for (const faq of bookingFaqs) {
       expect(faq.category).toBe('booking')
     }
+  })
+
+  it('auto-detects service quantity for navigation bar and landing page', () => {
+    const services = fallbackServices
+    const qty = services.length
+    expect(qty).toBe(3)
+    expect(String(qty)).toBe('3')
+
+    // Verifies that dynamic prices match database definitions
+    const individual = services.find((s) => s.title === 'Layanan Konseling Individu')
+    expect(individual?.priceOnline).toBe(110000)
+    expect(individual?.priceOffline).toBe(350000)
+  })
+
+  it('validates default clinical commitment editorial value pillars structure', () => {
+    const commitment = defaultLandingContent.clinical_commitment
+    expect(commitment).toBeDefined()
+    expect(commitment.badge).toBe('Komitmen Klinis')
+    expect(commitment.title).toBe('Mengapa Memilih')
+    expect(commitment.accent).toBe('Soulaide?')
+    expect(commitment.pillars.length).toBe(3)
+    expect(commitment.pillars[0].title).toBe('Psikolog Berizin SIPP')
+    expect(commitment.pillars[1].title).toBe('Kerahasiaan Medis Terjamin')
+    expect(commitment.pillars[2].title).toBe('Pilihan Sesi Fleksibel')
+  })
+
+  it('validates default contact maps structure aligning with Mulai Perjalanan Anda CTA and clinic details', () => {
+    const contactMaps = defaultLandingContent.contact_maps
+    expect(contactMaps).toBeDefined()
+    expect(contactMaps.clinic_name).toContain('Pondok Bambu')
+    expect(contactMaps.cta_badge).toBe('Mulai Perjalanan Anda')
+    expect(contactMaps.cta_title).toBe('Anda tidak harus menghadapi semuanya')
+    expect(contactMaps.cta_accent).toBe('sendirian.')
+    expect(contactMaps.maps_embed_url).toContain('https://www.google.com/maps/embed')
   })
 })

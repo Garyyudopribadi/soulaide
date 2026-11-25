@@ -44,7 +44,7 @@ export const CustomerPaymentsTab: React.FC<CustomerPaymentsTabProps> = ({
       {payments.length === 0 ? (
         <EmptyState
           title="Belum ada riwayat transaksi"
-          message="Seluruh pembayaran sesi konseling melalui gateway Midtrans akan tercatat secara otomatis di sini."
+          message="Seluruh pembayaran sesi konseling melalui QRIS dan transfer bank akan tercatat secara otomatis di sini."
         />
       ) : (
         <Card className="overflow-hidden border-slate-200">

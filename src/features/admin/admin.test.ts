@@ -251,3 +251,99 @@ describe('Report Export Content & Sanitization', () => {
     expect(secondRow).toBe('"SLD-02";"Citra ""Ayu""";"200000"');
   });
 });
+
+describe('Staff Directory Filtering & Role Segmentation', () => {
+  const sampleStaffList = [
+    {
+      id: 'staff-1',
+      user_id: 'u-1',
+      full_name: 'Super Admin Utama',
+      email: 'superadmin@soulaide.id',
+      phone_number: '0811111111',
+      avatar_url: null,
+      role: 'super_admin' as const,
+      created_at: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: 'staff-2',
+      user_id: 'u-2',
+      full_name: 'Admin Maya Operasional',
+      email: 'maya@soulaide.id',
+      phone_number: '0822222222',
+      avatar_url: null,
+      role: 'admin' as const,
+      created_at: '2026-01-02T00:00:00Z',
+    },
+    {
+      id: 'staff-3',
+      user_id: 'u-3',
+      full_name: 'Dr. Sarah Jenkins, M.Psi.',
+      email: 'sarah@soulaide.id',
+      phone_number: '0833333333',
+      avatar_url: null,
+      role: 'psychologist' as const,
+      created_at: '2026-01-03T00:00:00Z',
+    },
+    {
+      id: 'staff-4',
+      user_id: 'u-4',
+      full_name: 'Budi Santoso Klien',
+      email: 'budi.santoso@example.com',
+      phone_number: '0844444444',
+      avatar_url: null,
+      role: 'customer' as const,
+      created_at: '2026-01-04T00:00:00Z',
+    },
+  ];
+
+  it('correctly calculates role distribution counts', () => {
+    const roleCounts = {
+      all: sampleStaffList.length,
+      super_admin: sampleStaffList.filter((s) => s.role === 'super_admin').length,
+      admin: sampleStaffList.filter((s) => s.role === 'admin').length,
+      psychologist: sampleStaffList.filter((s) => s.role === 'psychologist').length,
+      customer: sampleStaffList.filter((s) => s.role === 'customer').length,
+    };
+
+    expect(roleCounts.all).toBe(4);
+    expect(roleCounts.super_admin).toBe(1);
+    expect(roleCounts.admin).toBe(1);
+    expect(roleCounts.psychologist).toBe(1);
+    expect(roleCounts.customer).toBe(1);
+  });
+
+  it('filters staff correctly by selected role', () => {
+    const filterByRole = (role: string) =>
+      sampleStaffList.filter((s) => role === 'all' || s.role === role);
+
+    expect(filterByRole('all')).toHaveLength(4);
+    expect(filterByRole('super_admin')).toHaveLength(1);
+    expect(filterByRole('super_admin')[0].full_name).toBe('Super Admin Utama');
+    expect(filterByRole('psychologist')).toHaveLength(1);
+    expect(filterByRole('psychologist')[0].email).toBe('sarah@soulaide.id');
+  });
+
+  it('filters staff correctly by search query (name, email, phone)', () => {
+    const filterStaff = (role: string, query: string) => {
+      return sampleStaffList.filter((staff) => {
+        const matchesRole = role === 'all' || staff.role === role;
+        const matchesSearch =
+          !query.trim() ||
+          staff.full_name.toLowerCase().includes(query.toLowerCase()) ||
+          (staff.email && staff.email.toLowerCase().includes(query.toLowerCase())) ||
+          (staff.phone_number && staff.phone_number.includes(query));
+        return matchesRole && matchesSearch;
+      });
+    };
+
+    // By name
+    expect(filterStaff('all', 'sarah')).toHaveLength(1);
+    // By email
+    expect(filterStaff('all', 'soulaide.id')).toHaveLength(3);
+    // By phone
+    expect(filterStaff('all', '08444')).toHaveLength(1);
+    // Combined role and search
+    expect(filterStaff('psychologist', 'maya')).toHaveLength(0);
+    expect(filterStaff('admin', 'maya')).toHaveLength(1);
+  });
+});

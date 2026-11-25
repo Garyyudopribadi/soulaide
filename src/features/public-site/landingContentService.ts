@@ -2,11 +2,11 @@ import { supabase } from '@/lib/supabase/client.ts'
 import { getAssetUrl } from '@/lib/utils.ts'
 
 export interface TopBarContent {
-  code_of_ethics: string
-  service_session: string
   schedule: string
   crisis_hotline: string
   crisis_phone: string
+  code_of_ethics?: string
+  service_session?: string
 }
 
 export interface HeroPhrase {
@@ -63,6 +63,24 @@ export interface ContactMapsContent {
   email: string
   phone: string
   maps_embed_url: string
+  cta_badge?: string
+  cta_title?: string
+  cta_accent?: string
+  cta_description?: string
+}
+
+export interface ClinicalCommitmentPillar {
+  title: string
+  description: string
+  icon?: string
+}
+
+export interface ClinicalCommitmentContent {
+  badge: string
+  title: string
+  accent: string
+  description: string
+  pillars: ClinicalCommitmentPillar[]
 }
 
 export interface FooterContent {
@@ -79,17 +97,18 @@ export interface LandingContentMap {
   hero: HeroContent
   philosophy: PhilosophyContent
   journey: JourneyContent
+  clinical_commitment: ClinicalCommitmentContent
   contact_maps: ContactMapsContent
   footer: FooterContent
 }
 
 export const defaultLandingContent: LandingContentMap = {
   top_bar: {
-    code_of_ethics: 'Standar Kode Etik HIMPSI & Psikolog Berlisensi SIPP',
-    service_session: 'Sesi Daring (Google Meet) & Tatap Muka Pondok Bambu Aktif',
-    schedule: 'Senin – Sabtu (By Appointment)',
-    crisis_hotline: '119 ext 8',
+    schedule: 'Senin–Sabtu, sesuai perjanjian',
+    crisis_hotline: '119',
     crisis_phone: '119',
+    code_of_ethics: '',
+    service_session: '',
   },
   hero: {
     tagline_eyebrow: 'Ruang Bertumbuh & Pemulihan Jiwa',
@@ -172,6 +191,33 @@ export const defaultLandingContent: LandingContentMap = {
       },
     ],
   },
+  clinical_commitment: {
+    badge: 'Komitmen Klinis',
+    title: 'Mengapa Memilih',
+    accent: 'Soulaide?',
+    description:
+      'Standar praktik psikologi profesional yang dibalut kehangatan, privasi medis, dan rasa aman.',
+    pillars: [
+      {
+        title: 'Psikolog Berizin SIPP',
+        description:
+          'Didampingi langsung oleh psikolog klinis berlisensi (S.Psi., M.Psi.) yang terdaftar resmi di HIMPSI dan menjunjung tinggi kode etik profesi.',
+        icon: 'heart',
+      },
+      {
+        title: 'Kerahasiaan Medis Terjamin',
+        description:
+          'Catatan sesi dan laporan asesmen MHCU dilindungi kontrol otorisasi ketat dan hanya dapat dibuka oleh psikolog yang menangani Anda.',
+        icon: 'shield',
+      },
+      {
+        title: 'Pilihan Sesi Fleksibel',
+        description:
+          'Pilih sesi daring (Google Meet) dari ruang pribadi Anda, atau tatap muka di ruang konsultasi tenang di Pondok Bambu, Jakarta Timur.',
+        icon: 'chat',
+      },
+    ],
+  },
   contact_maps: {
     clinic_name: 'Klinik Praktik Soulaide Pondok Bambu',
     address: 'Pondok Bambu, Duren Sawit, Jakarta Timur 13430',
@@ -180,6 +226,11 @@ export const defaultLandingContent: LandingContentMap = {
     phone: '+62 896-3086-9804',
     maps_embed_url:
       'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15865.045431608824!2d106.89745354999999!3d-6.230553199999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f36a5cf572d3%3A0x2a9a8d11c1e57c67!2sPondok%20Bambu%2C%20Duren%20Sawit%2C%20East%20Jakarta%20City%2C%20Jakarta!5e0!3m2!1sid!2sid!4v1700000000000!5m2!1sid!2sid',
+    cta_badge: 'Mulai Perjalanan Anda',
+    cta_title: 'Anda tidak harus menghadapi semuanya',
+    cta_accent: 'sendirian.',
+    cta_description:
+      'Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan empati dan keahlian klinis.',
   },
   footer: {
     tagline:
@@ -275,7 +326,22 @@ export const landingContentService = {
       )
 
     if (error) {
-      console.warn(`[Supabase Upsert Warning] Database upsert had issue: ${error.message}, falling back to persistent cache.`)
+      console.warn(`[Basis Data Upsert Warning] Landing content table: ${error.message}, falling back to persistent cache.`)
+    }
+
+    try {
+      // Secondary redundant sync to site settings table
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('Soulaide_site_settings') as any).upsert(
+        {
+          key: `landing_${sectionKey}`,
+          value: merged,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'key' }
+      )
+    } catch {
+      // ignore secondary sync
     }
 
     return merged

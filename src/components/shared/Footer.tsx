@@ -5,7 +5,6 @@ import {
   Clock,
   Mail,
   Phone,
-  ShieldCheck,
   AlertTriangle,
   ArrowUpRight,
 } from 'lucide-react'
@@ -191,15 +190,6 @@ export const Footer: React.FC = () => {
               >
                 <YoutubeIcon className="w-4 h-4" />
               </a>
-            </div>
-
-            <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-plum-800/70 border border-plum-400/25 text-plum-200 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-plum-300" /> Standar HIMPSI
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[#C8BCD8] font-medium">
-                Terverifikasi SIPP
-              </span>
             </div>
           </div>
 

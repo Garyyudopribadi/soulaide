@@ -365,13 +365,29 @@ export function usePsychologists() {
 
   const deletePsychologistMutation = useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('Soulaide_psychologists') as any)
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('id', id)
+      const resolvedId = (await resolvePsychologistUuid(id)) || id
 
-      if (error) {
-        throw new Error(`Gagal menonaktifkan psikolog: ${error.message}`)
+      // 1. Delete relations
+      try {
+        await supabase.from('Soulaide_psychologist_presence').delete().eq('psychologist_id', resolvedId)
+        await supabase.from('Soulaide_psychologist_schedules').delete().eq('psychologist_id', resolvedId)
+        await supabase.from('Soulaide_service_psychologists').delete().eq('psychologist_id', resolvedId)
+      } catch (relErr) {
+        console.warn('Delete relations remote note:', relErr)
+      }
+
+      // 2. Delete psychologist row from Soulaide_psychologists table
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: delErr } = await (supabase.from('Soulaide_psychologists') as any)
+        .delete()
+        .eq('id', resolvedId)
+
+      if (delErr) {
+        // Fallback to soft delete if restricted by foreign key
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('Soulaide_psychologists') as any)
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq('id', resolvedId)
       }
     },
     onSuccess: () => {

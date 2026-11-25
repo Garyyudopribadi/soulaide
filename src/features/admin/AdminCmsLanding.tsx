@@ -30,11 +30,19 @@ import {
   Play,
   FolderOpen,
   Compass,
+  Clock,
+  Phone,
+  Calendar,
+  ArrowUpRight,
+  HeartHandshake,
+  ShieldCheck,
+  MessageCircle,
 } from 'lucide-react'
+import { defaultLandingContent } from '@/features/public-site/landingContentService.ts'
 
 export const AdminCmsLanding: React.FC = () => {
   const { data: content, updateSection, isUpdating } = useLandingContent()
-  const [activeSubTab, setActiveSubTab] = useState<'top_bar' | 'hero' | 'philosophy' | 'journey' | 'contact_maps' | 'footer'>('top_bar')
+  const [activeSubTab, setActiveSubTab] = useState<'top_bar' | 'hero' | 'philosophy' | 'journey' | 'clinical_commitment' | 'contact_maps' | 'footer'>('top_bar')
 
   // Top Bar Form State
   const [topBar, setTopBar] = useState(content.top_bar)
@@ -73,6 +81,11 @@ export const AdminCmsLanding: React.FC = () => {
     ],
   })
 
+  // Clinical Commitment Form State
+  const [clinicalCommitment, setClinicalCommitment] = useState(
+    content.clinical_commitment || defaultLandingContent.clinical_commitment
+  )
+
   // Contact & Maps Form State
   const [contactMaps, setContactMaps] = useState(content.contact_maps)
 
@@ -108,6 +121,7 @@ export const AdminCmsLanding: React.FC = () => {
         })
       }
       if (content.journey) setJourney(content.journey)
+      if (content.clinical_commitment) setClinicalCommitment(content.clinical_commitment)
       if (content.contact_maps) setContactMaps(content.contact_maps)
       if (content.footer) {
         setFooter({
@@ -268,6 +282,20 @@ export const AdminCmsLanding: React.FC = () => {
     }
   }
 
+  const handleSaveClinicalCommitment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await updateSection({
+        sectionKey: 'clinical_commitment',
+        title: 'Komitmen Klinis Editorial Value Pillars',
+        content: clinicalCommitment,
+      })
+      showNotification('success', 'Bagian Komitmen Klinis berhasil diperbarui dan tersimpan!')
+    } catch (err) {
+      showNotification('error', err instanceof Error ? err.message : 'Gagal menyimpan Komitmen Klinis')
+    }
+  }
+
   const handleSaveContactMaps = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -403,66 +431,72 @@ export const AdminCmsLanding: React.FC = () => {
             <CardHeader className="border-b border-line pb-4">
               <CardTitle className="text-base font-bold text-ink flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-plum-600" />
-                <span>Pengaturan Top Micro Announcement Bar</span>
+                <span>Pengaturan Top Announcement Bar</span>
               </CardTitle>
               <p className="text-xs text-ink-muted">
-                Pita informasi paling atas yang tampil sebelum navigasi navbar.
+                Pita informasi di atas navbar beranda: menampilkan jadwal operasional dan nomor kontak hotline krisis darurat.
               </p>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
+            <CardContent className="p-5 space-y-5">
+              {/* Live Preview Box */}
+              <div className="rounded-lg border border-line bg-sanctuary-50/70 p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-plum-600" />
+                    Live Preview Bilah Atas (Top Announcement Bar):
+                  </span>
+                  <span className="text-[10px] text-ink-muted font-mono">Tampil di Beranda</span>
+                </div>
+                <div className="w-full bg-[#24152A] text-plum-100 rounded-md px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] shadow-xs">
+                  <div className="flex items-center gap-2 text-plum-200">
+                    <Clock className="w-3.5 h-3.5 text-plum-400 shrink-0" />
+                    <span>{topBar.schedule || 'Senin–Sabtu, sesuai perjanjian'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-plum-200">
+                    <Phone className="w-3.5 h-3.5 text-champagne-400 shrink-0" />
+                    <span>
+                      Hotline Krisis:{' '}
+                      <strong className="font-semibold text-white tracking-wide">
+                        {topBar.crisis_hotline || '119'}
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-ink-soft">
-                  Kredensial Etik (Kiri)
+                  Jadwal Operasional (Sisi Kiri)
                 </label>
                 <input
                   type="text"
                   required
-                  value={topBar.code_of_ethics}
-                  onChange={(e) => setTopBar({ ...topBar, code_of_ethics: e.target.value })}
+                  value={topBar.schedule}
+                  onChange={(e) => setTopBar({ ...topBar, schedule: e.target.value })}
+                  placeholder="Senin–Sabtu, sesuai perjanjian"
                   className="field-input"
                 />
+                <span className="text-[11px] text-ink-muted">
+                  Teks jadwal praktik atau jam operasional yang tampil di sisi kiri bilah atas.
+                </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-ink-soft">
-                    Status Sesi &amp; Layanan (Tengah)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={topBar.service_session}
-                    onChange={(e) => setTopBar({ ...topBar, service_session: e.target.value })}
-                    className="field-input"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">
-                    Jadwal Operasional
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={topBar.schedule}
-                    onChange={(e) => setTopBar({ ...topBar, schedule: e.target.value })}
-                    className="field-input"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">
-                    Teks Hotline Krisis
+                    Teks Label Hotline Krisis (Sisi Kanan)
                   </label>
                   <input
                     type="text"
                     required
                     value={topBar.crisis_hotline}
                     onChange={(e) => setTopBar({ ...topBar, crisis_hotline: e.target.value })}
-                    placeholder="119 ext 8"
+                    placeholder="119"
                     className="field-input"
                   />
+                  <span className="text-[11px] text-ink-muted">
+                    Label nomor krisis yang tampil, misalnya: 119
+                  </span>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-ink-soft">
@@ -476,6 +510,9 @@ export const AdminCmsLanding: React.FC = () => {
                     placeholder="119"
                     className="field-input"
                   />
+                  <span className="text-[11px] text-ink-muted">
+                    Nomor telepon yang langsung dipanggil saat pengunjung mengklik link hotline.
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -1078,73 +1115,110 @@ export const AdminCmsLanding: React.FC = () => {
       )}
 
       {/* =========================================================================
-          TAB 5: LOKASI, KONTAK & MAPS
+          TAB 5: KOMITMEN KLINIS (EDITORIAL VALUE PILLARS)
          ========================================================================= */}
-      {activeSubTab === 'contact_maps' && (
+      {activeSubTab === 'clinical_commitment' && (
         <Card className="rounded-xl border-line bg-paper-card">
-          <form onSubmit={handleSaveContactMaps}>
+          <form onSubmit={handleSaveClinicalCommitment}>
             <CardHeader className="border-b border-line pb-4">
               <CardTitle className="text-base font-bold text-ink flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-plum-600" />
-                <span>Kontak Klinik &amp; Embed Google Maps</span>
+                <HeartHandshake className="w-4 h-4 text-plum-600" />
+                <span>Pengaturan Komitmen Klinis (Mengapa Memilih Soulaide)</span>
               </CardTitle>
               <p className="text-xs text-ink-muted">
-                Perbarui alamat praktik Pondok Bambu, nomor telepon, dan URL embed peta Google Maps.
+                Kelola judul pengantar, deskripsi nilai utama, dan 3 pilar komitmen klinis yang tampil di beranda.
               </p>
             </CardHeader>
-            <CardContent className="p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">Nama Klinik</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactMaps.clinic_name}
-                    onChange={(e) => setContactMaps({ ...contactMaps, clinic_name: e.target.value })}
-                    className="field-input"
-                  />
+            <CardContent className="p-5 space-y-6">
+              {/* Live Preview Box */}
+              <div className="rounded-lg border border-line bg-sanctuary-50/70 p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-line pb-2">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-plum-600" />
+                    Live Preview Komitmen Klinis:
+                  </span>
+                  <span className="text-[10px] text-ink-muted font-mono">Tampil di Bagian Bawah Beranda</span>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">Jadwal Praktik</label>
-                  <input
-                    type="text"
-                    required
-                    value={contactMaps.schedule}
-                    onChange={(e) => setContactMaps({ ...contactMaps, schedule: e.target.value })}
-                    className="field-input"
-                  />
+
+                <div className="space-y-2 pb-3 border-b border-line/60">
+                  <div className="flex items-center gap-2">
+                    <span className="h-px w-6 bg-plum-600" />
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-plum-600">
+                      {clinicalCommitment.badge || 'Komitmen Klinis'}
+                    </span>
+                  </div>
+                  <h3 className="font-serif text-xl sm:text-2xl text-ink">
+                    {clinicalCommitment.title || 'Mengapa Memilih'}{' '}
+                    <span className="italic text-plum-700">{clinicalCommitment.accent || 'Soulaide?'}</span>
+                  </h3>
+                  <p className="text-xs text-ink-muted">
+                    {clinicalCommitment.description}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                  {clinicalCommitment.pillars.map((pillar, idx) => {
+                    const PillarIcon =
+                      idx === 0 ? HeartHandshake : idx === 1 ? ShieldCheck : MessageCircle
+                    const iconColor =
+                      idx === 2 ? 'text-champagne-600' : 'text-plum-700'
+                    return (
+                      <div key={idx} className="border-t border-line pt-3 space-y-1.5 bg-white/70 p-3 rounded-md">
+                        <PillarIcon className={`w-4 h-4 ${iconColor}`} />
+                        <h4 className="text-xs font-bold text-ink">{pillar.title}</h4>
+                        <p className="text-[11px] text-ink-muted leading-relaxed line-clamp-3">
+                          {pillar.description}
+                        </p>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-ink-soft">Alamat Lengkap Praktik</label>
-                <input
-                  type="text"
-                  required
-                  value={contactMaps.address}
-                  onChange={(e) => setContactMaps({ ...contactMaps, address: e.target.value })}
-                  className="field-input"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Header Configuration */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">Email Resmi</label>
+                  <label className="text-xs font-semibold text-ink-soft">
+                    Badge Eyebrow
+                  </label>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    value={contactMaps.email}
-                    onChange={(e) => setContactMaps({ ...contactMaps, email: e.target.value })}
+                    value={clinicalCommitment.badge}
+                    onChange={(e) =>
+                      setClinicalCommitment({ ...clinicalCommitment, badge: e.target.value })
+                    }
+                    placeholder="Komitmen Klinis"
                     className="field-input"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-ink-soft">Nomor Telepon/WA</label>
+                  <label className="text-xs font-semibold text-ink-soft">
+                    Judul Utama
+                  </label>
                   <input
                     type="text"
                     required
-                    value={contactMaps.phone}
-                    onChange={(e) => setContactMaps({ ...contactMaps, phone: e.target.value })}
+                    value={clinicalCommitment.title}
+                    onChange={(e) =>
+                      setClinicalCommitment({ ...clinicalCommitment, title: e.target.value })
+                    }
+                    placeholder="Mengapa Memilih"
+                    className="field-input"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-soft">
+                    Kata Aksen (Miring)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={clinicalCommitment.accent}
+                    onChange={(e) =>
+                      setClinicalCommitment({ ...clinicalCommitment, accent: e.target.value })
+                    }
+                    placeholder="Soulaide?"
                     className="field-input"
                   />
                 </div>
@@ -1152,31 +1226,340 @@ export const AdminCmsLanding: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-ink-soft">
-                  URL Embed Google Maps (iframe src)
+                  Deskripsi Pengantar
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   required
-                  value={contactMaps.maps_embed_url}
-                  onChange={(e) => setContactMaps({ ...contactMaps, maps_embed_url: e.target.value })}
-                  placeholder="https://www.google.com/maps/embed?pb=..."
-                  className="field-input font-mono text-[11px]"
+                  value={clinicalCommitment.description}
+                  onChange={(e) =>
+                    setClinicalCommitment({ ...clinicalCommitment, description: e.target.value })
+                  }
+                  className="field-input"
                 />
-                <p className="text-[11px] text-ink-muted">
-                  Buka Google Maps &gt; Bagikan &gt; Sematkan Peta &gt; Salin tautan `src=&quot;...&quot;`.
-                </p>
               </div>
 
-              {/* Preview Frame */}
-              <div className="pt-2">
-                <span className="text-xs font-bold text-ink block mb-2">Live Preview Peta:</span>
-                <div className="w-full h-48 rounded-lg overflow-hidden border border-line bg-sanctuary-100">
-                  <iframe
-                    title="Live Maps Preview"
-                    src={contactMaps.maps_embed_url}
-                    className="w-full h-full border-0"
-                    loading="lazy"
+              {/* 3 Pillars Configuration */}
+              <div className="space-y-4 pt-2 border-t border-line">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-soft flex items-center gap-1.5">
+                    <HeartHandshake className="w-3.5 h-3.5 text-plum-600" />
+                    <span>3 Pilar Nilai Komitmen Klinis</span>
+                  </h4>
+                  <span className="text-[11px] text-ink-muted">Dapat disesuaikan sesuai kebutuhan</span>
+                </div>
+
+                <div className="space-y-4">
+                  {clinicalCommitment.pillars.map((pillar, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-lg border border-line bg-paper space-y-3"
+                    >
+                      <div className="flex items-center justify-between border-b border-line/60 pb-2">
+                        <span className="text-xs font-bold text-plum-800">
+                          Pilar 0{idx + 1}
+                        </span>
+                        <span className="text-[10px] text-ink-muted">
+                          {idx === 0
+                            ? 'Ikon: Hati / Kemitraan'
+                            : idx === 1
+                            ? 'Ikon: Perisai / Kerahasiaan'
+                            : 'Ikon: Percakapan / Fleksibilitas'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-ink-soft">
+                          Judul Pilar
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={pillar.title}
+                          onChange={(e) => {
+                            const updated = [...clinicalCommitment.pillars]
+                            updated[idx] = { ...updated[idx], title: e.target.value }
+                            setClinicalCommitment({ ...clinicalCommitment, pillars: updated })
+                          }}
+                          className="field-input"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-ink-soft">
+                          Uraian Penjelasan Pilar
+                        </label>
+                        <textarea
+                          rows={2}
+                          required
+                          value={pillar.description}
+                          onChange={(e) => {
+                            const updated = [...clinicalCommitment.pillars]
+                            updated[idx] = { ...updated[idx], description: e.target.value }
+                            setClinicalCommitment({ ...clinicalCommitment, pillars: updated })
+                          }}
+                          className="field-input"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-line p-4 flex justify-end">
+              <Button type="submit" disabled={isUpdating} className="gap-2">
+                <Save className="w-4 h-4" />
+                <span>Simpan Perubahan Komitmen Klinis</span>
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      )}
+
+      {/* =========================================================================
+          TAB 5: LOKASI, KONTAK & MAPS (SESUAI LANDING PAGE TERBARU)
+         ========================================================================= */}
+      {activeSubTab === 'contact_maps' && (
+        <Card className="rounded-xl border-line bg-paper-card">
+          <form onSubmit={handleSaveContactMaps}>
+            <CardHeader className="border-b border-line pb-4">
+              <CardTitle className="text-base font-bold text-ink flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-plum-600" />
+                <span>Kontak, Lokasi Praktik &amp; Kartu &quot;Mulai Perjalanan Anda&quot;</span>
+              </CardTitle>
+              <p className="text-xs text-ink-muted">
+                Perbarui kartu ajakan penutup (Mulai Perjalanan Anda), alamat praktik Pondok Bambu, nomor WhatsApp konsultasi, dan embed peta Google Maps sesuai landing page terbaru.
+              </p>
+            </CardHeader>
+            <CardContent className="p-5 space-y-6">
+              {/* BAGIAN A: Kartu Ajakan (Mulai Perjalanan Anda) */}
+              <div className="space-y-3 pb-5 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-plum-800">
+                    1. Kartu Ajakan &bull; Mulai Perjalanan Anda (Pengganti WhatsApp Resmi &amp; Jam/Surel)
+                  </h4>
+                </div>
+                <p className="text-[11px] text-ink-muted">
+                  Kartu ini tampil di sebelah kiri lokasi klinik dengan latar warna plum elegan dan tombol aksi langsung.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink-soft">Label / Tag Kartu</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactMaps.cta_badge || 'Mulai Perjalanan Anda'}
+                      onChange={(e) => setContactMaps({ ...contactMaps, cta_badge: e.target.value })}
+                      placeholder="Mulai Perjalanan Anda"
+                      className="field-input"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink-soft">Judul Utama</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactMaps.cta_title || 'Anda tidak harus menghadapi semuanya'}
+                      onChange={(e) => setContactMaps({ ...contactMaps, cta_title: e.target.value })}
+                      placeholder="Anda tidak harus menghadapi semuanya"
+                      className="field-input"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink-soft">Kata Aksen (Miring)</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactMaps.cta_accent || 'sendirian.'}
+                      onChange={(e) => setContactMaps({ ...contactMaps, cta_accent: e.target.value })}
+                      placeholder="sendirian."
+                      className="field-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-soft">Deskripsi / Kalimat Empati</label>
+                  <textarea
+                    rows={2}
+                    required
+                    value={
+                      contactMaps.cta_description ||
+                      'Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan empati dan keahlian klinis.'
+                    }
+                    onChange={(e) => setContactMaps({ ...contactMaps, cta_description: e.target.value })}
+                    placeholder="Ambil langkah kecil yang penuh makna..."
+                    className="field-input"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-soft">
+                    Nomor WhatsApp Konsultasi (Tujuan Tombol &quot;Konsultasi via WhatsApp&quot;)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={contactMaps.phone}
+                    onChange={(e) => setContactMaps({ ...contactMaps, phone: e.target.value })}
+                    placeholder="+62 896-3086-9804"
+                    className="field-input"
+                  />
+                  <p className="text-[11px] text-ink-muted">
+                    Format nomor internasional diawali +62 (contoh: +62 896-3086-9804).
+                  </p>
+                </div>
+              </div>
+
+              {/* BAGIAN B: Klinik Tatap Muka */}
+              <div className="space-y-3 pb-5 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-plum-600" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-plum-800">
+                    2. Informasi Klinik Tatap Muka (Pondok Bambu)
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink-soft">Nama Klinik</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactMaps.clinic_name}
+                      onChange={(e) => setContactMaps({ ...contactMaps, clinic_name: e.target.value })}
+                      placeholder="Klinik Praktik Soulaide Pondok Bambu"
+                      className="field-input"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-ink-soft">Catatan Jadwal Praktik</label>
+                    <input
+                      type="text"
+                      required
+                      value={contactMaps.schedule}
+                      onChange={(e) => setContactMaps({ ...contactMaps, schedule: e.target.value })}
+                      placeholder="Senin – Sabtu (Sesuai Perjanjian)"
+                      className="field-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-soft">Alamat Lengkap Praktik</label>
+                  <input
+                    type="text"
+                    required
+                    value={contactMaps.address}
+                    onChange={(e) => setContactMaps({ ...contactMaps, address: e.target.value })}
+                    placeholder="Pondok Bambu, Duren Sawit, Jakarta Timur 13430"
+                    className="field-input"
+                  />
+                </div>
+              </div>
+
+              {/* BAGIAN C: Peta Google Maps Embed */}
+              <div className="space-y-3 pb-5 border-b border-line">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-plum-600" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-plum-800">
+                    3. Sematan Peta Interaktif (Google Maps Embed)
+                  </h4>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-soft">
+                    URL Embed Google Maps (iframe src)
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={contactMaps.maps_embed_url}
+                    onChange={(e) => setContactMaps({ ...contactMaps, maps_embed_url: e.target.value })}
+                    placeholder="https://www.google.com/maps/embed?pb=..."
+                    className="field-input font-mono text-[11px]"
+                  />
+                  <p className="text-[11px] text-ink-muted">
+                    Buka Google Maps &gt; Bagikan &gt; Sematkan Peta &gt; Salin tautan `src=&quot;...&quot;`.
+                  </p>
+                </div>
+              </div>
+
+              {/* BAGIAN D: Live Preview Sesuai Landing Page Terbaru */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-ink block">
+                  Live Preview Bagian Kontak &amp; Lokasi (Persis Tampilan Landing Page):
+                </span>
+
+                <div className="p-4 sm:p-6 rounded-xl border border-line bg-paper-deep/40 space-y-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                    {/* Kartu Mulai Perjalanan Anda */}
+                    <div className="lg:col-span-7 flex flex-col justify-between bg-plum-900 p-5 sm:p-6 text-[#FBF7F0] rounded-xl border border-plum-800 shadow-xs">
+                      <div className="space-y-2">
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.16em] text-plum-200">
+                          <span>{contactMaps.cta_badge || 'Mulai Perjalanan Anda'}</span>
+                        </div>
+                        <h5 className="font-serif text-lg sm:text-xl text-[#FBF7F0] leading-snug">
+                          {contactMaps.cta_title || 'Anda tidak harus menghadapi semuanya'}{' '}
+                          <span className="italic text-plum-200">{contactMaps.cta_accent || 'sendirian.'}</span>
+                        </h5>
+                        <p className="text-xs text-[#D6C9D8] leading-relaxed">
+                          {contactMaps.cta_description ||
+                            'Ambil langkah kecil yang penuh makna. Tim psikolog Soulaide siap mendengarkan dan mendampingi Anda dengan empati dan keahlian klinis.'}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-white/15 pt-3">
+                        <span className="inline-flex items-center gap-1 bg-[#FBF7F0] px-3 py-1.5 text-xs font-semibold text-plum-900 rounded-md">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>Reservasi Sesi Sekarang</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 border border-white/25 px-3 py-1.5 text-xs font-semibold text-[#FBF7F0] rounded-md">
+                          <span>Konsultasi via WhatsApp</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Kartu Klinik Tatap Muka */}
+                    <div className="lg:col-span-5 flex flex-col justify-between border border-line bg-paper-card p-5 rounded-xl shadow-xs">
+                      <div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-plum-600">
+                          <MapPin className="h-3 w-3" />
+                          <span>Klinik tatap muka</span>
+                        </div>
+                        <h6 className="mt-2 text-sm font-bold text-ink">
+                          {contactMaps.clinic_name || 'Klinik Soulaide Pondok Bambu'}
+                        </h6>
+                        <p className="mt-1 text-xs text-ink-muted leading-relaxed">
+                          {contactMaps.address || 'Pondok Bambu, Duren Sawit, Jakarta Timur 13430'}
+                        </p>
+                        <p className="mt-2 text-[10px] text-[#72677E]">
+                          Ruang konsultasi kedap suara, tenang, dan privat untuk sesi tatap muka dengan janji temu terkonfirmasi.
+                        </p>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-xs">
+                        <span className="text-ink-muted text-[11px]">{contactMaps.schedule || 'Praktik sesuai janji temu'}</span>
+                        <span className="font-semibold text-plum-800 flex items-center gap-1 text-[11px]">
+                          <span>Petunjuk arah</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Peta Iframe */}
+                  <div className="w-full h-44 rounded-lg overflow-hidden border border-line bg-sanctuary-100">
+                    <iframe
+                      title="Live Maps Preview"
+                      src={contactMaps.maps_embed_url}
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
