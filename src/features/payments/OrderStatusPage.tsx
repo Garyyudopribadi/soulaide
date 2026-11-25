@@ -155,7 +155,7 @@ export const OrderStatusPage: React.FC = () => {
 
             <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-sm mx-auto">
               {isPaid
-                ? 'Terima kasih. Dana telah diverifikasi oleh sistem QRISGate dan jadwal konseling Anda resmi terkonfirmasi.'
+                ? 'Terima kasih. Dana telah diverifikasi oleh sistem dan jadwal konseling Anda resmi terkonfirmasi.'
                 : isExpired
                 ? 'Batas waktu 15 menit telah habis. Kode unik telah dilepas kembali ke sistem.'
                 : 'Silakan lakukan pembayaran dengan nominal tepat (termasuk kode unik) sebelum batas waktu berakhir.'}

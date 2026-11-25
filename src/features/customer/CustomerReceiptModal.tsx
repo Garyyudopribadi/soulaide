@@ -111,7 +111,7 @@ export const CustomerReceiptModal: React.FC<CustomerReceiptModalProps> = ({
                     <p className="text-[11px] text-slate-500">Konseling Psikologi Terjadwal</p>
                   </td>
                   <td className="p-3 text-right capitalize text-slate-600">
-                    {payment.payment_type || 'QRISGate Payment'}
+                    {payment.payment_type || 'QRIS / Transfer Bank'}
                   </td>
                   <td className="p-3 text-right font-bold text-slate-900">
                     {formatIDR(payment.amount)}

@@ -719,7 +719,7 @@ export const BookingPage: React.FC = () => {
 
                   <div className="flex items-center gap-2 text-[11px] text-[#72677E] pt-1">
                     <ShieldCheck className="w-4 h-4 text-plum-700 shrink-0" />
-                    <span>Pembayaran aman via QRISGate (QRIS &amp; Transfer Bank) &amp; Kode Etik HIMPSI.</span>
+                    <span>Pembayaran aman otomatis (QRIS &amp; Transfer Bank) &amp; Kode Etik HIMPSI.</span>
                   </div>
                 </CardContent>
               </Card>

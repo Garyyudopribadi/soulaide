@@ -11,8 +11,17 @@ export interface PaymentRecord {
   booking_id: string;
   amount: number;
   status: PaymentStatus;
-  midtrans_order_id: string; // Used as external_order_id in schema
-  midtrans_transaction_id: string | null;
+  provider?: string;
+  provider_order_id?: string;
+  provider_transaction_id?: string | null;
+  unique_code?: number | null;
+  total_amount?: number | null;
+  qr_string?: string | null;
+  qr_image?: string | null;
+  checkout_url?: string | null;
+  expires_at?: string | null;
+  midtrans_order_id?: string; // Legacy alias
+  midtrans_transaction_id?: string | null;
   payment_type: string | null;
   payment_time: string | null;
   created_at: string;
@@ -20,16 +29,22 @@ export interface PaymentRecord {
 }
 
 export interface QrisgateCheckoutResponse {
-  checkout_url: string;
+  checkout_url?: string | null;
+  order_id?: string;
+  amount?: number;
   total_amount: number;
   unique_code?: number;
-  qr_string?: string;
-  expires_at?: string;
-  external_order_id: string;
-  transaction_id?: string;
+  qr_string?: string | null;
+  qr_image_base64?: string | null;
+  expires_at?: string | null;
+  external_order_id?: string;
+  transaction_id?: string | null;
   mode?: 'live' | 'mock';
+  reused?: boolean;
   message?: string;
 }
+
+export type QrisGatePaymentSession = QrisgateCheckoutResponse;
 
 export interface QrisgateTransactionDetails {
   id: string;
