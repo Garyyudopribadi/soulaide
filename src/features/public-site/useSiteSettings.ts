@@ -56,7 +56,6 @@ export function useSiteSettings() {
         return fallbackSettings
       }
     },
-    initialData: fallbackSettings,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -66,12 +65,13 @@ export function useSiteSettings() {
     mutationFn: async (newSettings: Partial<SiteSettings>) => {
       // Update whatsapp
       if (newSettings.whatsappNumber || newSettings.defaultMessage) {
+        const currentData = query.data ?? fallbackSettings
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase.from('Soulaide_site_settings') as any).upsert({
           key: 'whatsapp',
           value: {
-            phone_number: newSettings.whatsappNumber || query.data.whatsappNumber,
-            default_message: newSettings.defaultMessage || query.data.defaultMessage,
+            phone_number: newSettings.whatsappNumber || currentData.whatsappNumber,
+            default_message: newSettings.defaultMessage || currentData.defaultMessage,
           },
           updated_at: new Date().toISOString(),
         })
@@ -112,6 +112,7 @@ export function useSiteSettings() {
 
   return {
     ...query,
+    data: query.data ?? fallbackSettings,
     updateSettings: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
   }

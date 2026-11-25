@@ -75,7 +75,6 @@ export function useFaqs() {
         return fallbackFaqs
       }
     },
-    initialData: fallbackFaqs,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -119,6 +118,7 @@ export function useFaqs() {
 
   return {
     ...query,
+    data: query.data ?? [],
     addFaq: addFaqMutation.mutateAsync,
     deleteFaq: deleteFaqMutation.mutateAsync,
   }

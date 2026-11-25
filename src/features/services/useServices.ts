@@ -499,7 +499,6 @@ export function useServices() {
         return getEffectiveServices()
       }
     },
-    initialData: getEffectiveServices(),
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -802,6 +801,7 @@ export function useServices() {
 
   return {
     ...query,
+    data: query.data ?? [],
     updatePrice: updatePriceMutation.mutateAsync,
     isUpdatingPrice: updatePriceMutation.isPending,
     updateService: updateServiceMutation.mutateAsync,

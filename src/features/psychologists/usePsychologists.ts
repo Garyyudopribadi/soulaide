@@ -249,11 +249,6 @@ export function usePsychologists() {
         }))
       }
     },
-    initialData: initialPsychologists.map((p) => ({
-      ...p,
-      presence: localPresenceCache.get(p.id) ?? 'available',
-      isActive: true,
-    })),
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -400,6 +395,7 @@ export function usePsychologists() {
 
   return {
     ...query,
+    data: query.data ?? [],
     updatePresence: updatePresenceMutation.mutateAsync,
     isUpdatingPresence: updatePresenceMutation.isPending,
     updatePsychologist: updatePsychologistMutation.mutateAsync,
