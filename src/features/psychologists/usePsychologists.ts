@@ -36,6 +36,105 @@ export interface CreatePsychologistInput {
   bio?: string
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Module-level in-memory cache for presence status so updates are immediately preserved
+const localPresenceCache = new Map<string, PresenceStatus>()
+
+async function withTimeout<T>(promiseLike: PromiseLike<T>, timeoutMs = 2000): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeoutPromise = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs)
+  })
+  try {
+    const result = await Promise.race([Promise.resolve(promiseLike), timeoutPromise])
+    clearTimeout(timer!)
+    return result as T
+  } catch {
+    clearTimeout(timer!)
+    return null
+  }
+}
+
+export async function resolvePsychologistUuid(idOrSlug: string): Promise<string | null> {
+  if (!idOrSlug) return null
+  if (UUID_REGEX.test(idOrSlug)) {
+    return idOrSlug
+  }
+
+  try {
+    // 1. Try finding by slug in Soulaide_psychologists
+    const bySlugResult = await withTimeout(
+      supabase
+        .from('Soulaide_psychologists')
+        .select('id')
+        .eq('slug', idOrSlug)
+        .maybeSingle()
+    )
+
+    if (bySlugResult?.data?.id && UUID_REGEX.test(bySlugResult.data.id)) {
+      return bySlugResult.data.id
+    }
+
+    // 2. Try finding by matching partial slug or name
+    const cleanTerm = idOrSlug.replace(/-/g, ' ')
+    const byTermResult = await withTimeout(
+      supabase
+        .from('Soulaide_psychologists')
+        .select('id')
+        .or(`slug.ilike.%${idOrSlug}%,full_name.ilike.%${cleanTerm}%`)
+        .limit(1)
+        .maybeSingle()
+    )
+
+    if (byTermResult?.data?.id && UUID_REGEX.test(byTermResult.data.id)) {
+      return byTermResult.data.id
+    }
+
+    // 3. Fallback: check matching psychologist in initialPsychologists
+    const matchingInitial = initialPsychologists.find(
+      (p) =>
+        p.id === idOrSlug ||
+        p.fullName.toLowerCase().includes(cleanTerm.toLowerCase()) ||
+        cleanTerm.toLowerCase().includes(p.fullName.toLowerCase())
+    )
+
+    if (matchingInitial) {
+      if (UUID_REGEX.test(matchingInitial.id)) {
+        return matchingInitial.id
+      }
+
+      // Try inserting into Soulaide_psychologists so database generates a real UUID
+      const insertResult = await withTimeout(
+        supabase
+          .from('Soulaide_psychologists')
+          .insert({
+            slug: idOrSlug,
+            full_name: matchingInitial.fullName,
+            credentials: matchingInitial.credentials,
+            experience_years: matchingInitial.experienceYears,
+            initial_schedule: matchingInitial.initialSchedule,
+            practice_areas: matchingInitial.practiceAreas,
+            approaches: matchingInitial.approaches,
+            card_image_url: matchingInitial.cardImage,
+            profile_image_url: matchingInitial.profileImage,
+            is_active: true,
+          })
+          .select('id')
+          .single()
+      )
+
+      if (insertResult?.data?.id && UUID_REGEX.test(insertResult.data.id)) {
+        return insertResult.data.id
+      }
+    }
+  } catch (err) {
+    console.warn('Could not resolve psychologist UUID from slug:', idOrSlug, err)
+  }
+
+  return null
+}
+
 export function usePsychologists() {
   const queryClient = useQueryClient()
 
@@ -43,9 +142,38 @@ export function usePsychologists() {
     queryKey: ['soulaide-psychologists'],
     queryFn: async () => {
       try {
-        const { data: psychs, error: psychsError } = await supabase
+        const { data: fetchedPsychs, error: psychsError } = await supabase
           .from('Soulaide_psychologists')
           .select('*')
+
+        let psychs = fetchedPsychs
+
+        // If the table is accessible but empty, seed initial psychologists
+        if (!psychsError && psychs && psychs.length === 0) {
+          try {
+            const seedRows = initialPsychologists.map((p) => ({
+              slug: p.id,
+              full_name: p.fullName,
+              credentials: p.credentials,
+              experience_years: p.experienceYears,
+              initial_schedule: p.initialSchedule,
+              practice_areas: p.practiceAreas,
+              approaches: p.approaches,
+              card_image_url: p.cardImage,
+              profile_image_url: p.profileImage,
+              is_active: true,
+            }))
+            const { data: seeded } = await supabase
+              .from('Soulaide_psychologists')
+              .insert(seedRows)
+              .select('*')
+            if (seeded && seeded.length > 0) {
+              psychs = seeded
+            }
+          } catch {
+            // fallback
+          }
+        }
 
         const { data: presenceData } = await supabase
           .from('Soulaide_psychologist_presence')
@@ -57,11 +185,15 @@ export function usePsychologists() {
             presenceMap.set(p.psychologist_id, p.status as PresenceStatus)
           })
         }
+        // Incorporate in-memory presence cache
+        localPresenceCache.forEach((status, id) => {
+          presenceMap.set(id, status)
+        })
 
         if (psychsError || !psychs || psychs.length === 0) {
           return initialPsychologists.map((p) => ({
             ...p,
-            presence: 'available' as PresenceStatus,
+            presence: presenceMap.get(p.id) ?? localPresenceCache.get(p.id) ?? 'available',
             isActive: true,
           }))
         }
@@ -87,8 +219,15 @@ export function usePsychologists() {
             ? getAssetUrl(p.profile_image_url)
             : matchingInitial?.profileImage || getAssetUrl('/Soulaide Psi Arc Logo.webp')
 
+          const presenceStatus =
+            presenceMap.get(p.id) ??
+            (p.slug ? presenceMap.get(p.slug) : undefined) ??
+            localPresenceCache.get(p.id) ??
+            'available'
+
           return {
             id: p.id,
+            slug: p.slug,
             fullName: p.full_name,
             credentials: p.credentials,
             experienceYears: p.experience_years,
@@ -97,7 +236,7 @@ export function usePsychologists() {
             approaches: p.approaches,
             cardImage: cardImg,
             profileImage: profileImg,
-            presence: presenceMap.get(p.id) ?? 'available',
+            presence: presenceStatus,
             tier: isSenior ? ('Soul Expert' as const) : ('Soul Guidance' as const),
             isActive: p.is_active,
           }
@@ -105,14 +244,14 @@ export function usePsychologists() {
       } catch {
         return initialPsychologists.map((p) => ({
           ...p,
-          presence: 'available' as PresenceStatus,
+          presence: localPresenceCache.get(p.id) ?? 'available',
           isActive: true,
         }))
       }
     },
     initialData: initialPsychologists.map((p) => ({
       ...p,
-      presence: 'available' as PresenceStatus,
+      presence: localPresenceCache.get(p.id) ?? 'available',
       isActive: true,
     })),
   })
@@ -125,21 +264,40 @@ export function usePsychologists() {
       psychologistId: string
       status: PresenceStatus
     }) => {
-      // Upsert presence in Soulaide_psychologist_presence
-      const { error } = await supabase.from('Soulaide_psychologist_presence').upsert(
-        {
-          psychologist_id: psychologistId,
-          status,
-          last_active_at: new Date().toISOString(),
-        },
-        { onConflict: 'psychologist_id' }
-      )
+      // Store in local cache immediately
+      localPresenceCache.set(psychologistId, status)
 
-      if (error) {
-        throw new Error(`Gagal mengubah ketersediaan: ${error.message}`)
+      const targetUuid = await resolvePsychologistUuid(psychologistId)
+
+      if (targetUuid && UUID_REGEX.test(targetUuid)) {
+        localPresenceCache.set(targetUuid, status)
+        const { error } = await supabase.from('Soulaide_psychologist_presence').upsert(
+          {
+            psychologist_id: targetUuid,
+            status,
+            last_active_at: new Date().toISOString(),
+          },
+          { onConflict: 'psychologist_id' }
+        )
+
+        if (error) {
+          const cleanMessage = error.message
+            .replace(/supabase/gi, 'layanan')
+            .replace(/webp/gi, 'gambar')
+          throw new Error(`Gagal mengubah ketersediaan: ${cleanMessage}`)
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      queryClient.setQueryData<PsychologistWithPresence[]>(['soulaide-psychologists'], (old) => {
+        if (!old) return old
+        return old.map((p) => {
+          if (p.id === variables.psychologistId || (p.slug && p.slug === variables.psychologistId)) {
+            return { ...p, presence: variables.status }
+          }
+          return p
+        })
+      })
       queryClient.invalidateQueries({ queryKey: ['soulaide-psychologists'] })
     },
   })

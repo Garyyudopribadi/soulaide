@@ -60,7 +60,7 @@ export const customerService = {
    */
   async updateUserProfile(
     userId: string,
-    data: { full_name?: string; phone_number?: string }
+    data: { full_name?: string; phone_number?: string | null; avatar_url?: string | null }
   ): Promise<void> {
     const { error } = await supabase
       .from('Soulaide_profiles')

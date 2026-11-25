@@ -5,13 +5,15 @@ export type AdminTab =
   | 'overview'
   | 'bookings'
   | 'payments'
+  | 'reports'
   | 'landing'
   | 'services'
   | 'psychologists'
   | 'staff'
   | 'audit-logs'
   | 'faqs'
-  | 'settings';
+  | 'settings'
+  | 'profile';
 
 export interface AdminBookingItem {
   id: string;
@@ -71,6 +73,8 @@ export interface AdminStaffItem {
   user_id: string;
   email: string | null;
   full_name: string;
+  phone_number?: string | null;
+  avatar_url?: string | null;
   role: UserRole;
   created_at: string;
 }

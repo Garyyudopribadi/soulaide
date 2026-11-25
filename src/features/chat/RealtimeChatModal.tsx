@@ -13,7 +13,6 @@ import {
 import { useAuth } from '@/features/auth/useAuth.ts';
 import { chatService } from './chatService.ts';
 import { presenceService, PRESENCE_CONFIG } from './presenceService.ts';
-import { CrisisDisclaimerBanner } from './CrisisDisclaimerBanner.tsx';
 import type { ChatMessage, PresenceStatus } from './types.ts';
 import type { CustomerBookingRecord } from '@/features/booking/bookingService.ts';
 
@@ -32,6 +31,7 @@ export const RealtimeChatModal: React.FC<RealtimeChatModalProps> = ({ booking, o
   const [psychologistPresence, setPsychologistPresence] = useState<PresenceStatus>('offline');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,6 +40,12 @@ export const RealtimeChatModal: React.FC<RealtimeChatModalProps> = ({ booking, o
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus();
+    }
+  }, [isLoading]);
 
   // Load conversation and messages
   useEffect(() => {
@@ -174,11 +180,6 @@ export const RealtimeChatModal: React.FC<RealtimeChatModalProps> = ({ booking, o
           </div>
         </CardHeader>
 
-        {/* Prominent Crisis Medical Disclaimer */}
-        <div className="shrink-0 p-2.5 bg-amber-50/70 border-b border-amber-200">
-          <CrisisDisclaimerBanner compact />
-        </div>
-
         {/* Chat Messages Body */}
         <CardContent className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40">
           {isLoading ? (
@@ -246,6 +247,7 @@ export const RealtimeChatModal: React.FC<RealtimeChatModalProps> = ({ booking, o
         <CardFooter className="p-3 border-t border-slate-200 bg-white shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-2 w-full">
             <input
+              ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}

@@ -135,10 +135,25 @@ export const psychologistService = {
    * Fetch presence status of psychologist
    */
   async fetchPresence(psychologistId: string): Promise<PresenceStatus> {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let targetId = psychologistId;
+    if (!UUID_REGEX.test(targetId)) {
+      const { data: found } = await supabase
+        .from('Soulaide_psychologists')
+        .select('id')
+        .eq('slug', targetId)
+        .maybeSingle();
+      if (found?.id && UUID_REGEX.test(found.id)) {
+        targetId = found.id;
+      } else {
+        return 'available';
+      }
+    }
+
     const { data } = await supabase
       .from('Soulaide_psychologist_presence')
       .select('status')
-      .eq('psychologist_id', psychologistId)
+      .eq('psychologist_id', targetId)
       .maybeSingle();
 
     return (data?.status as PresenceStatus) || 'offline';
@@ -148,11 +163,26 @@ export const psychologistService = {
    * Update presence status
    */
   async updatePresence(psychologistId: string, status: PresenceStatus): Promise<void> {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let targetId = psychologistId;
+    if (!UUID_REGEX.test(targetId)) {
+      const { data: found } = await supabase
+        .from('Soulaide_psychologists')
+        .select('id')
+        .eq('slug', targetId)
+        .maybeSingle();
+      if (found?.id && UUID_REGEX.test(found.id)) {
+        targetId = found.id;
+      } else {
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from('Soulaide_psychologist_presence')
       .upsert(
         {
-          psychologist_id: psychologistId,
+          psychologist_id: targetId,
           status,
           last_active_at: new Date().toISOString(),
         },
@@ -161,7 +191,8 @@ export const psychologistService = {
 
     if (error) {
       console.error('Error updating presence:', error);
-      throw new Error(`Gagal memperbarui status: ${error.message}`);
+      const cleanMessage = error.message.replace(/supabase/gi, 'layanan').replace(/webp/gi, 'gambar');
+      throw new Error(`Gagal memperbarui status: ${cleanMessage}`);
     }
   },
 

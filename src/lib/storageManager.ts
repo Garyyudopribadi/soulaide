@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client.ts'
 import { getAssetUrl } from '@/lib/utils.ts'
 
-export type StorageFolder = 'landing' | 'psychologists' | 'services' | 'brochures' | 'brand'
+export type StorageFolder = 'landing' | 'psychologists' | 'services' | 'brochures' | 'brand' | 'avatars'
 
 export interface ImageOptimizationOptions {
   maxWidth?: number

@@ -140,13 +140,14 @@ export const PsychologistOverviewTab: React.FC<PsychologistOverviewTabProps> = (
         }
         actions={
           <>
-            <div className="relative z-50 rounded-xl border border-[#E2DAD1] bg-white px-2.5 py-1.5 shadow-2xs">
+            <div className="relative z-50 rounded-xl border border-[#E2DAD1] bg-white px-3 py-1.5 shadow-2xs flex flex-col items-start min-w-[210px]">
               <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[#8E81A1]">
                 Status kehadiran
               </p>
               <PsychologistPresenceControl
                 currentStatus={presence}
                 onStatusChange={onPresenceChange}
+                align="right"
               />
             </div>
             <Button

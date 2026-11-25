@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Pagination } from '@/components/shared/Pagination';
 import {
   Calendar,
   Clock,
@@ -32,6 +33,8 @@ export const PsychologistSessionsTab: React.FC<PsychologistSessionsTabProps> = (
 }) => {
   const [filter, setFilter] = useState<'today' | 'upcoming' | 'completed' | 'all'>('today');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -56,6 +59,11 @@ export const PsychologistSessionsTab: React.FC<PsychologistSessionsTabProps> = (
       return true;
     });
   }, [bookings, filter, searchQuery, todayStr]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
 
   const todayCount = bookings.filter((b) => b.session_date === todayStr).length;
 
@@ -138,7 +146,7 @@ export const PsychologistSessionsTab: React.FC<PsychologistSessionsTabProps> = (
         />
       ) : (
         <div className="space-y-4">
-          {filteredBookings.map((b) => (
+          {paginatedBookings.map((b) => (
             <Card
               key={b.id}
               className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-shadow"
@@ -246,6 +254,18 @@ export const PsychologistSessionsTab: React.FC<PsychologistSessionsTabProps> = (
               </div>
             </Card>
           ))}
+
+          <Card className="overflow-hidden border-slate-200">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredBookings.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20]}
+              itemLabel="sesi"
+            />
+          </Card>
         </div>
       )}
     </div>

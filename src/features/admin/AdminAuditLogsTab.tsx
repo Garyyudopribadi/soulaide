@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Pagination } from '@/components/shared/Pagination';
 import { Activity, Clock, Search, ChevronRight, ChevronDown } from 'lucide-react';
 import type { AdminAuditLogItem } from './types';
 
@@ -12,6 +13,8 @@ interface AdminAuditLogsTabProps {
 export const AdminAuditLogsTab: React.FC<AdminAuditLogsTabProps> = ({ logs }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((l) => {
@@ -25,6 +28,11 @@ export const AdminAuditLogsTab: React.FC<AdminAuditLogsTabProps> = ({ logs }) =>
       return true;
     });
   }, [logs, searchQuery]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredLogs.slice(start, start + pageSize);
+  }, [filteredLogs, currentPage, pageSize]);
 
   const toggleExpand = (id: string) => {
     setExpandedLogId(expandedLogId === id ? null : id);
@@ -81,7 +89,7 @@ export const AdminAuditLogsTab: React.FC<AdminAuditLogsTabProps> = ({ logs }) =>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                {filteredLogs.map((log) => {
+                {paginatedLogs.map((log) => {
                   const isExpanded = expandedLogId === log.id;
                   return (
                     <React.Fragment key={log.id}>
@@ -149,6 +157,15 @@ export const AdminAuditLogsTab: React.FC<AdminAuditLogsTabProps> = ({ logs }) =>
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredLogs.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[15, 30, 50, 100]}
+            itemLabel="log aktivitas"
+          />
         </Card>
       )}
     </div>

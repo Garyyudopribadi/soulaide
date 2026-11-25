@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Printer, CheckCircle, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Printer, CheckCircle, ShieldCheck } from 'lucide-react';
 import type { CustomerPaymentItem } from './types';
 import { formatIDR } from '@/lib/utils';
 
@@ -42,8 +42,12 @@ export const CustomerReceiptModal: React.FC<CustomerReceiptModalProps> = ({
         <CardHeader className="bg-gradient-to-r from-plum-700 to-plum-800 text-white p-6">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-plum-200">
-                <HeartHandshake className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center p-1.5 backdrop-blur-sm">
+                <img
+                  src="/Soulaide Psi Arc Logo.webp"
+                  alt="Soulaide Logo"
+                  className="w-full h-full object-contain filter drop-shadow"
+                />
               </div>
               <div>
                 <CardTitle className="text-xl font-bold tracking-tight">Kwitansi Pembayaran</CardTitle>

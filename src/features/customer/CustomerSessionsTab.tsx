@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Pagination } from '@/components/shared/Pagination';
 import {
   Calendar,
   Clock,
@@ -36,6 +37,8 @@ export const CustomerSessionsTab: React.FC<CustomerSessionsTabProps> = ({
 }) => {
   const [filter, setFilter] = useState<SessionFilter>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -61,6 +64,11 @@ export const CustomerSessionsTab: React.FC<CustomerSessionsTabProps> = ({
       return true;
     });
   }, [bookings, filter, searchQuery, todayStr]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -131,7 +139,7 @@ export const CustomerSessionsTab: React.FC<CustomerSessionsTabProps> = ({
         />
       ) : (
         <div className="space-y-4">
-          {filteredBookings.map((booking) => (
+          {paginatedBookings.map((booking) => (
             <Card key={booking.id} className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
                 {/* Session Details */}
@@ -247,6 +255,18 @@ export const CustomerSessionsTab: React.FC<CustomerSessionsTabProps> = ({
               </div>
             </Card>
           ))}
+
+          <Card className="overflow-hidden border-slate-200">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredBookings.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20]}
+              itemLabel="sesi konseling"
+            />
+          </Card>
         </div>
       )}
     </div>

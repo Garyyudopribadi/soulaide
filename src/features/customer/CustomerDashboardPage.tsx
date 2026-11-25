@@ -317,6 +317,7 @@ export const CustomerDashboardPage: React.FC = () => {
             initialFullName={profile?.full_name || ''}
             initialPhone={profile?.phone_number || ''}
             userEmail={user?.email || ''}
+            avatarUrl={profile?.avatar_url}
             clientProfile={clientProfile}
             consents={consents}
             onProfileUpdated={() => loadProfile()}

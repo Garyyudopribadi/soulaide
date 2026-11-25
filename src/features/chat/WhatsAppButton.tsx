@@ -68,11 +68,11 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
         <button
           type="button"
           onClick={() => setShowChooser(true)}
-          className={`w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-[0_8px_24px_-4px_rgba(5,150,105,0.45)] transition-all hover:scale-105 cursor-pointer ring-4 ring-white/80 ${className}`}
+          className={`w-12 h-12 rounded-full bg-[#1F7A4C] hover:bg-[#18633D] text-white flex items-center justify-center shadow-md transition-all hover:scale-[1.02] cursor-pointer ring-2 ring-white/90 border border-emerald-900/10 ${className}`}
           title="Chat WhatsApp Resmi Soulaide"
           aria-label="Chat WhatsApp Resmi Soulaide"
         >
-          <MessageCircle className="w-5 h-5 fill-white text-emerald-600" />
+          <MessageCircle className="w-5 h-5 fill-white text-[#1F7A4C]" />
         </button>
       )}
 

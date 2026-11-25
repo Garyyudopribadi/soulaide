@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, ShieldCheck, HeartHandshake, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Phone, ShieldCheck, HeartHandshake, FileText, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 import type { ClientProfileData, CustomerConsentRecord } from './types';
 import { customerService } from './customerService';
+import { AccountProfileSecurity } from '@/components/dashboard/AccountProfileSecurity';
 
 interface CustomerProfileTabProps {
   userId: string;
   initialFullName: string;
   initialPhone: string;
   userEmail: string;
+  avatarUrl?: string | null;
   clientProfile: ClientProfileData | null;
   consents: CustomerConsentRecord[];
   onProfileUpdated: () => void;
@@ -21,12 +23,11 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
   initialFullName,
   initialPhone,
   userEmail,
+  avatarUrl,
   clientProfile,
   consents,
   onProfileUpdated,
 }) => {
-  const [fullName, setFullName] = useState(initialFullName);
-  const [phone, setPhone] = useState(initialPhone);
   const [dob, setDob] = useState(clientProfile?.date_of_birth || '');
   const [gender, setGender] = useState(clientProfile?.gender || 'Laki-laki');
   const [occupation, setOccupation] = useState(clientProfile?.occupation || '');
@@ -34,24 +35,17 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
   const [emergencyPhone, setEmergencyPhone] = useState(clientProfile?.emergency_contact_phone || '');
   const [emergencyRelation, setEmergencyRelation] = useState(clientProfile?.emergency_contact_relation || '');
 
-  const [saving, setSaving] = useState(false);
+  const [savingIntake, setSavingIntake] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleUpdateIntake = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setSavingIntake(true);
     setSuccessNotice(null);
     setErrorNotice(null);
 
     try {
-      // 1. Update base user profile
-      await customerService.updateUserProfile(userId, {
-        full_name: fullName,
-        phone_number: phone,
-      });
-
-      // 2. Update client intake & emergency contact
       await customerService.updateCustomerClientProfile(userId, {
         date_of_birth: dob || null,
         gender: gender || null,
@@ -61,91 +55,65 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
         emergency_contact_relation: emergencyRelation || null,
       });
 
-      setSuccessNotice('Data profil dan kontak darurat berhasil diperbarui.');
+      setSuccessNotice('Data demografis dan kontak darurat klien berhasil disimpan.');
       onProfileUpdated();
     } catch (err: unknown) {
-      setErrorNotice(err instanceof Error ? err.message : 'Gagal memperbarui profil.');
+      setErrorNotice(err instanceof Error ? err.message : 'Gagal memperbarui data kontak darurat.');
     } finally {
-      setSaving(false);
+      setSavingIntake(false);
       setTimeout(() => setSuccessNotice(null), 4000);
     }
   };
 
-  return (
-    <div className="space-y-8">
-      {successNotice && (
-        <div className="p-4 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-medium rounded-xl flex items-center gap-2 border border-emerald-200">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>{successNotice}</span>
-        </div>
-      )}
-
-      {errorNotice && (
-        <div className="p-4 bg-red-50 text-red-700 text-xs sm:text-sm font-medium rounded-xl flex items-center gap-2 border border-red-200">
-          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-          <span>{errorNotice}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Data Akun & Pribadi */}
-        <Card className="border-slate-200">
-          <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4">
-            <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <User className="w-4 h-4 text-plum-600" />
-              <span>Data Identitas Klien</span>
+  const extraClientSections = (
+    <div className="space-y-6">
+      {/* Data Demografis & Kontak Darurat Form */}
+      <form onSubmit={handleUpdateIntake} className="space-y-6">
+        <Card className="border-[#E4DCD3] shadow-sm">
+          <CardHeader className="border-b border-[#EFE9E2] bg-[#FAF8F5]/60 pb-4">
+            <CardTitle className="text-base font-bold text-plum-950 flex items-center gap-2">
+              <Phone className="w-4 h-4 text-rose-600" />
+              <span>Data Demografis & Kontak Darurat Medis</span>
             </CardTitle>
+            <p className="text-xs text-[#72677E] mt-1">
+              Data ini disimpan secara aman dan terenkripsi. Kontak darurat hanya dihubungi jika terjadi situasi darurat medis selama periode konseling.
+            </p>
           </CardHeader>
-          <CardContent className="pt-5 space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nama Lengkap</label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
-                />
-              </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Email (Akun)</label>
-                <input
-                  type="email"
-                  value={userEmail}
-                  disabled
-                  className="w-full px-3.5 py-2 border border-slate-200 bg-slate-100 text-slate-500 rounded-xl cursor-not-allowed"
-                />
+          <CardContent className="pt-6 space-y-4 text-xs">
+            {successNotice && (
+              <div className="p-3.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl flex items-center gap-2 border border-emerald-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{successNotice}</span>
               </div>
+            )}
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nomor WhatsApp / HP</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="08xxxxxxxxxx"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
-                />
+            {errorNotice && (
+              <div className="p-3.5 bg-rose-50 text-rose-700 text-xs font-semibold rounded-xl flex items-center gap-2 border border-rose-200">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{errorNotice}</span>
               </div>
+            )}
 
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Tanggal Lahir</label>
+                <label htmlFor="client-dob" className="font-semibold text-slate-700 block mb-1">Tanggal Lahir</label>
                 <input
+                  id="client-dob"
                   type="date"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none text-xs"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Jenis Kelamin</label>
+                <label htmlFor="client-gender" className="font-semibold text-slate-700 block mb-1">Jenis Kelamin</label>
                 <select
+                  id="client-gender"
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none bg-white"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none bg-white text-xs"
                 >
                   <option value="Laki-laki">Laki-laki</option>
                   <option value="Perempuan">Perempuan</option>
@@ -154,90 +122,87 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
               </div>
 
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Pekerjaan / Aktivitas</label>
+                <label htmlFor="client-occupation" className="font-semibold text-slate-700 block mb-1">Pekerjaan / Aktivitas</label>
                 <input
+                  id="client-occupation"
                   type="text"
                   value={occupation}
                   onChange={(e) => setOccupation(e.target.value)}
-                  placeholder="Contoh: Karyawan Swasta, Mahasiswa"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
+                  placeholder="Contoh: Mahasiswa, Karyawan"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none text-xs"
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Kontak Darurat (Emergency Contact) */}
-        <Card className="border-slate-200">
-          <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4">
-            <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-rose-600" />
-              <span>Kontak Darurat (Emergency Contact)</span>
-            </CardTitle>
-            <p className="text-xs text-slate-500">
-              Diperlukan demi keselamatan Anda apabila terjadi situasi darurat medis selama periode konseling.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-5 space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nama Kontak Darurat</label>
-                <input
-                  type="text"
-                  value={emergencyName}
-                  onChange={(e) => setEmergencyName(e.target.value)}
-                  placeholder="Nama orang terdekat"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
-                />
-              </div>
+            <div className="border-t border-slate-100 pt-4 mt-2">
+              <h4 className="font-bold text-plum-950 text-xs mb-3 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-plum-600" />
+                Informasi Kontak Darurat (Emergency Contact)
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="client-emergency-name" className="font-semibold text-slate-700 block mb-1">Nama Kontak Darurat</label>
+                  <input
+                    id="client-emergency-name"
+                    type="text"
+                    value={emergencyName}
+                    onChange={(e) => setEmergencyName(e.target.value)}
+                    placeholder="Nama kerabat / wali"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none text-xs"
+                  />
+                </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Nomor Telepon Darurat</label>
-                <input
-                  type="tel"
-                  value={emergencyPhone}
-                  onChange={(e) => setEmergencyPhone(e.target.value)}
-                  placeholder="08xxxxxxxxxx"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
-                />
-              </div>
+                <div>
+                  <label htmlFor="client-emergency-phone" className="font-semibold text-slate-700 block mb-1">Nomor Telepon Darurat</label>
+                  <input
+                    id="client-emergency-phone"
+                    type="tel"
+                    value={emergencyPhone}
+                    onChange={(e) => setEmergencyPhone(e.target.value)}
+                    placeholder="08xxxxxxxxxx"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none text-xs"
+                  />
+                </div>
 
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Hubungan</label>
-                <input
-                  type="text"
-                  value={emergencyRelation}
-                  onChange={(e) => setEmergencyRelation(e.target.value)}
-                  placeholder="Contoh: Orang Tua, Pasangan, Saudara"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none"
-                />
+                <div>
+                  <label htmlFor="client-emergency-relation" className="font-semibold text-slate-700 block mb-1">Hubungan</label>
+                  <input
+                    id="client-emergency-relation"
+                    type="text"
+                    value={emergencyRelation}
+                    onChange={(e) => setEmergencyRelation(e.target.value)}
+                    placeholder="Contoh: Orang Tua, Pasangan"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-plum-500 focus:outline-none text-xs"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="bg-slate-50 border-t border-slate-100 p-4 flex justify-end">
+
+          <CardFooter className="bg-[#FAF8F5]/60 border-t border-[#EFE9E2] p-4 flex justify-end">
             <Button
               type="submit"
-              disabled={saving}
-              className="bg-plum-600 hover:bg-plum-700 text-white text-xs px-5 font-semibold"
+              disabled={savingIntake}
+              className="px-5 text-xs font-semibold"
             >
-              {saving ? 'Menyimpan...' : 'Simpan Perubahan Profil'}
+              {savingIntake ? 'Menyimpan...' : 'Simpan Data Demografis & Kontak'}
             </Button>
           </CardFooter>
         </Card>
       </form>
 
       {/* Informed Consent & Perlindungan Data Medis */}
-      <Card className="border-slate-200">
-        <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-4">
-          <CardTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+      <Card className="border-[#E4DCD3] shadow-sm">
+        <CardHeader className="border-b border-[#EFE9E2] bg-[#FAF8F5]/60 pb-4">
+          <CardTitle className="text-base font-bold text-plum-950 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>Persetujuan Layanan (Informed Consent) & Kerahasiaan Data</span>
           </CardTitle>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[#72677E] mt-1">
             Hak dan perlindungan kerahasiaan Anda sesuai Kode Etik Psikologi Indonesia (HIMPSI).
           </p>
         </CardHeader>
-        <CardContent className="pt-5 space-y-4 text-xs">
+        <CardContent className="pt-6 space-y-4 text-xs">
           <div className="p-4 bg-plum-50/60 border border-plum-100 rounded-xl space-y-2 text-slate-700">
             <h4 className="font-bold text-plum-900 flex items-center gap-1.5">
               <HeartHandshake className="w-4 h-4 text-plum-600" />
@@ -263,7 +228,7 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
                 {consents.map((consent) => (
                   <div
                     key={consent.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                    className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl"
                   >
                     <div>
                       <span className="font-semibold text-slate-800 block capitalize">
@@ -287,5 +252,18 @@ export const CustomerProfileTab: React.FC<CustomerProfileTabProps> = ({
         </CardContent>
       </Card>
     </div>
+  );
+
+  return (
+    <AccountProfileSecurity
+      userId={userId}
+      initialFullName={initialFullName}
+      initialPhone={initialPhone}
+      userEmail={userEmail}
+      roleLabel="Klien"
+      avatarUrl={avatarUrl}
+      onProfileUpdated={onProfileUpdated}
+      extraProfileSection={extraClientSections}
+    />
   );
 };

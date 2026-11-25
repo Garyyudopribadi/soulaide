@@ -4,6 +4,7 @@ import { getAssetUrl } from '@/lib/utils.ts'
 export const initialPsychologists: PsychologistProfile[] = [
   {
     id: 'finandita-utari',
+    slug: 'finandita-utari',
     fullName: 'Finandita Utari',
     credentials: 'M.Psi., Psikolog., CTC., CGA.',
     experienceYears: '> 10 tahun',
@@ -16,6 +17,7 @@ export const initialPsychologists: PsychologistProfile[] = [
   },
   {
     id: 'amanda-natasanti',
+    slug: 'amanda-natasanti',
     fullName: 'Amanda Natasanti',
     credentials: 'S.Psi., Psikolog.',
     experienceYears: '< 2 tahun',
@@ -28,6 +30,7 @@ export const initialPsychologists: PsychologistProfile[] = [
   },
   {
     id: 'filza-ayska',
+    slug: 'filza-ayska',
     fullName: 'Filza Ayska Syabina',
     credentials: 'S.Psi., Psikolog.',
     experienceYears: '< 2 tahun',
@@ -40,6 +43,7 @@ export const initialPsychologists: PsychologistProfile[] = [
   },
   {
     id: 'narissa-qurrata',
+    slug: 'narissa-qurrata',
     fullName: 'Narissa Qurrata Ayunin',
     credentials: 'S.Psi., Psikolog.',
     experienceYears: '< 2 tahun',

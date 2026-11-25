@@ -7,6 +7,8 @@ import {
   type UpdatePsychologistInput,
 } from '@/features/psychologists/usePsychologists.ts'
 import { uploadManagedAsset } from '@/lib/storageManager.ts'
+import { PsychologistPresenceControl } from '@/features/psychologist/PsychologistPresenceControl.tsx'
+import type { PresenceStatus } from '@/features/psychologist/types.ts'
 import {
   Check,
   Edit2,
@@ -53,16 +55,23 @@ export const AdminCmsPsychologists: React.FC = () => {
     setTimeout(() => setNotice(null), 4000)
   }
 
-  const handleToggleActive = async (psychId: string, name: string, currentPresence: string) => {
-    const nextPresence = currentPresence === 'available' ? 'busy' : 'available'
+  const handlePresenceChange = async (psychId: string, name: string, nextStatus: PresenceStatus) => {
     try {
-      await updatePresence({ psychologistId: psychId, status: nextPresence })
+      await updatePresence({ psychologistId: psychId, status: nextStatus })
+      const statusLabels: Record<PresenceStatus, string> = {
+        available: 'Tersedia (Siap Melayani)',
+        busy: 'Sedang Sesi (Busy)',
+        away: 'Istirahat (Away)',
+        online: 'Aktif (Online)',
+        offline: 'Tidak Aktif (Offline)',
+      }
+      const label = statusLabels[nextStatus] || nextStatus
       showNotification(
         'success',
-        `Status sesi "${name}" diubah ke: ${nextPresence === 'available' ? 'Tersedia' : 'Sibuk/Sesi'}.`
+        `Status kehadiran "${name}" berhasil diubah menjadi ${label}.`
       )
     } catch (err) {
-      showNotification('error', err instanceof Error ? err.message : 'Gagal memperbarui ketersediaan.')
+      showNotification('error', err instanceof Error ? err.message : 'Gagal memperbarui status ketersediaan.')
     }
   }
 
@@ -160,7 +169,7 @@ export const AdminCmsPsychologists: React.FC = () => {
           setNewProfileImg(res.url)
         }
       }
-      showNotification('success', `Foto ${targetType} berhasil dikompresi ke WebP & diunggah.`)
+      showNotification('success', `Foto ${targetType} berhasil dioptimasi & diunggah.`)
     } catch (err) {
       showNotification('error', err instanceof Error ? err.message : 'Gagal mengunggah foto.')
     } finally {
@@ -175,7 +184,7 @@ export const AdminCmsPsychologists: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-900">Manajemen Profil Psikolog (Full Edit)</h2>
           <p className="text-xs text-slate-500">
-            Kelola data profil lengkap psikolog, foto resmi WebP, kredensial, keahlian, dan ketersediaan.
+            Kelola data profil lengkap psikolog, foto resmi teroptimasi, kredensial, keahlian, dan ketersediaan.
           </p>
         </div>
         <Button size="sm" onClick={() => setShowAddModal(true)} className="gap-1.5 self-start sm:self-auto">
@@ -204,7 +213,7 @@ export const AdminCmsPsychologists: React.FC = () => {
       {/* Psychologists List Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {psychologists.map((psych) => (
-          <Card key={psych.id} className="flex flex-col justify-between">
+          <Card key={psych.id} className="relative flex flex-col justify-between overflow-visible">
             <div className="p-4 sm:p-5 flex gap-4">
               <div className="w-20 h-24 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
                 <img
@@ -239,20 +248,17 @@ export const AdminCmsPsychologists: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 pt-3 border-t border-gray-100 flex flex-wrap justify-between items-center gap-2">
-              <span className="text-xs text-slate-500">
-                Status: <strong className="text-slate-800">{psych.presence}</strong>
-              </span>
+            <div className="p-4 pt-3 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3 relative z-30">
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleToggleActive(psych.id, psych.fullName, psych.presence)}
+                <span className="text-xs text-slate-500 font-medium">Status:</span>
+                <PsychologistPresenceControl
+                  currentStatus={psych.presence as PresenceStatus}
+                  onStatusChange={(status) => handlePresenceChange(psych.id, psych.fullName, status)}
                   disabled={isUpdatingPresence}
-                  className="text-xs"
-                >
-                  {psych.presence === 'available' ? 'Set Sibuk' : 'Set Tersedia'}
-                </Button>
+                  align="left"
+                />
+              </div>
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -379,7 +385,7 @@ export const AdminCmsPsychologists: React.FC = () => {
                 {/* Image Uploads */}
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-700 block">Foto Card (WebP)</label>
+                    <label className="text-xs font-semibold text-slate-700 block">Foto Kartu Pratinjau</label>
                     <div className="w-16 h-20 bg-slate-100 rounded overflow-hidden border">
                       <img src={editingPsych.cardImageUrl || ''} alt="Card Preview" className="w-full h-full object-cover" />
                     </div>
@@ -397,7 +403,7 @@ export const AdminCmsPsychologists: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-700 block">Foto Profil Detail (WebP)</label>
+                    <label className="text-xs font-semibold text-slate-700 block">Foto Profil Detail</label>
                     <div className="w-16 h-20 bg-slate-100 rounded overflow-hidden border">
                       <img src={editingPsych.profileImageUrl || ''} alt="Profile Preview" className="w-full h-full object-cover" />
                     </div>
@@ -523,7 +529,7 @@ export const AdminCmsPsychologists: React.FC = () => {
 
                 {/* Upload Section */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <label className="text-xs font-semibold text-slate-700 block">Upload Foto Psikolog (Auto-WebP)</label>
+                  <label className="text-xs font-semibold text-slate-700 block">Upload Foto Psikolog (Auto-Optimasi)</label>
                   <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 cursor-pointer">
                     <Upload className="w-3.5 h-3.5" />
                     <span>{uploadingImg ? 'Mengunggah & Mengonversi...' : 'Pilih Foto & Optimasi'}</span>

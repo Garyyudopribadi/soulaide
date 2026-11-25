@@ -10,6 +10,7 @@ import { PsychologistSessionsTab } from './PsychologistSessionsTab'
 import { PsychologistCalendarTab } from './PsychologistCalendarTab'
 import { PsychologistClinicalModal } from './PsychologistClinicalModal'
 import { CustomerChatModal } from '@/features/customer/CustomerChatModal'
+import { AccountProfileSecurity } from '@/components/dashboard/AccountProfileSecurity'
 import type { CustomerBookingRecord } from '@/features/booking/bookingService'
 import type { BookingStatus } from '@/types'
 import type {
@@ -17,7 +18,7 @@ import type {
   PresenceStatus,
   PsychologistTab,
 } from './types'
-import { CalendarDays, CheckCircle2, Clock, FileText, LayoutDashboard } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Clock, FileText, LayoutDashboard, UserCheck } from 'lucide-react'
 import { toDateKey } from '@/lib/dashboard'
 
 export const PsychologistDashboardPage: React.FC = () => {
@@ -151,6 +152,11 @@ export const PsychologistDashboardPage: React.FC = () => {
           label: 'Ketersediaan',
           icon: Clock,
         },
+        {
+          key: 'profile',
+          label: 'Profil & Keamanan',
+          icon: UserCheck,
+        },
       ],
     },
   ]
@@ -242,6 +248,28 @@ export const PsychologistDashboardPage: React.FC = () => {
             psychologistId={psychologistId || psychologistProfile?.id || ''}
             schedules={schedules}
             onSchedulesUpdated={() => refetchSchedules()}
+          />
+        </div>
+      )}
+
+      {activeTab === 'profile' && user && (
+        <div className="space-y-5">
+          <DashboardSubHeader
+            eyebrow="Praktisi Klinis"
+            title="Profil &"
+            accent="Keamanan Sandi"
+            description="Perbarui informasi identitas profil dan kelola kata sandi akun praktisi psikologi Anda."
+          />
+          <AccountProfileSecurity
+            userId={user.id}
+            initialFullName={psychologistProfile?.full_name || profile?.full_name || ''}
+            initialPhone={profile?.phone_number || ''}
+            userEmail={user.email || ''}
+            roleLabel="Psikolog"
+            avatarUrl={psychologistProfile?.profile_image_url || profile?.avatar_url}
+            onProfileUpdated={() => {
+              // trigger refresh
+            }}
           />
         </div>
       )}

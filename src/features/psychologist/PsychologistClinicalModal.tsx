@@ -168,6 +168,7 @@ const ClinicalNoteForm: React.FC<ClinicalNoteFormProps> = ({
               1. Ringkasan Sesi & Keluhan Utama (Session Summary)
             </label>
             <textarea
+              autoFocus
               value={sessionSummary}
               onChange={(e) => setSessionSummary(e.target.value)}
               rows={3}

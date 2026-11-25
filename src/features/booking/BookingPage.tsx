@@ -73,7 +73,7 @@ export const BookingPage: React.FC = () => {
 
   // Selected psychologist
   const selectedPsychologist =
-    tierPsychologists.find((p) => p.id === psychologistIdState) ||
+    tierPsychologists.find((p) => p.id === psychologistIdState || (p.slug && p.slug === psychologistIdState)) ||
     tierPsychologists[0] ||
     psychologists[0]
 

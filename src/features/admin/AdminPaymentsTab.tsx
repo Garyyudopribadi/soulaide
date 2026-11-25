@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Pagination } from '@/components/shared/Pagination';
+import { exportToExcelXml, printPdfReport } from '@/lib/exportUtils';
 import { PaymentStatusBadge } from '@/features/payments/PaymentStatusBadge';
 import {
   CreditCard,
@@ -9,6 +11,8 @@ import {
   Search,
   CheckCircle,
   AlertCircle,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 import type { AdminPaymentItem } from './types';
 import { adminService } from './adminService';
@@ -25,6 +29,8 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [refundPayment, setRefundPayment] = useState<AdminPaymentItem | null>(null);
   const [refundAmount, setRefundAmount] = useState<number>(0);
   const [refundReason, setRefundReason] = useState('');
@@ -47,6 +53,79 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
       return true;
     });
   }, [payments, statusFilter, searchQuery]);
+
+  const paginatedPayments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPayments.slice(start, start + pageSize);
+  }, [filteredPayments, currentPage, pageSize]);
+
+  const handleExportExcel = () => {
+    exportToExcelXml({
+      filename: `Pembayaran_Soulaide_${new Date().toISOString().split('T')[0]}`,
+      title: 'DAFTAR TRANSAKSI PEMBAYARAN & REFUND',
+      subtitle: `Filter Status: ${statusFilter !== 'all' ? statusFilter : 'Semua Transaksi'}`,
+      columns: [
+        { header: 'No', key: '_no', width: 6, align: 'center' },
+        { header: 'Order ID Gateway', key: 'midtrans_order_id', width: 20 },
+        { header: 'Kode Booking', key: 'booking_code', width: 14 },
+        { header: 'Klien', key: 'customer_name', width: 22 },
+        { header: 'Layanan', key: 'service_name', width: 24 },
+        { header: 'Metode', key: 'payment_type', width: 14, align: 'center' },
+        { header: 'Nominal', key: 'amount_formatted', width: 16, align: 'right' },
+        { header: 'Status', key: 'status_label', width: 14, align: 'center' },
+        { header: 'Waktu Transaksi', key: 'created_formatted', width: 18, align: 'center' },
+      ],
+      data: filteredPayments.map((p, idx) => ({
+        _no: idx + 1,
+        midtrans_order_id: p.midtrans_order_id,
+        booking_code: p.booking_code,
+        customer_name: p.customer_name,
+        service_name: p.service_name,
+        payment_type: p.payment_type ? p.payment_type.toUpperCase() : 'Midtrans',
+        amount_formatted: formatIDR(p.amount),
+        status_label: p.status === 'paid' ? 'Lunas' : p.status,
+        created_formatted: new Date(p.created_at).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      })),
+    });
+  };
+
+  const handlePrintPdf = () => {
+    printPdfReport({
+      filename: `Pembayaran_Soulaide_${new Date().toISOString().split('T')[0]}`,
+      title: 'DAFTAR TRANSAKSI PEMBAYARAN & KEUANGAN',
+      subtitle: 'Rekapitulasi Pembayaran Klien Portal Soulaide',
+      columns: [
+        { header: 'No', key: '_no', width: 4, align: 'center' },
+        { header: 'Order ID', key: 'midtrans_order_id', width: 16 },
+        { header: 'Booking', key: 'booking_code', width: 12 },
+        { header: 'Klien', key: 'customer_name', width: 18 },
+        { header: 'Layanan', key: 'service_name', width: 20 },
+        { header: 'Nominal', key: 'amount_formatted', width: 14, align: 'right' },
+        { header: 'Status', key: 'status_label', width: 12, align: 'center' },
+        { header: 'Waktu', key: 'created_formatted', width: 14, align: 'center' },
+      ],
+      data: filteredPayments.map((p, idx) => ({
+        _no: idx + 1,
+        midtrans_order_id: p.midtrans_order_id,
+        booking_code: p.booking_code,
+        customer_name: p.customer_name,
+        service_name: p.service_name,
+        amount_formatted: formatIDR(p.amount),
+        status_label: p.status === 'paid' ? 'Lunas' : p.status,
+        created_formatted: new Date(p.created_at).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }),
+      })),
+    });
+  };
 
   const totalPaid = payments
     .filter((p) => p.status === 'paid')
@@ -162,11 +241,33 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
         />
       ) : (
         <Card className="overflow-hidden border-slate-200 shadow-sm">
-          <CardHeader className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+          <CardHeader className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-plum-600" />
-              <span>Daftar Transaksi Midtrans & Rekonsiliasi ({filteredPayments.length})</span>
+              <span>Daftar Transaksi Midtrans &amp; Rekonsiliasi ({filteredPayments.length})</span>
             </CardTitle>
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportExcel}
+                className="h-7 text-xs gap-1.5 text-slate-700 hover:text-emerald-700"
+                title="Ekspor ke format Excel (.xls)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Export Excel</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePrintPdf}
+                className="h-7 text-xs gap-1.5 text-slate-700 hover:text-plum-700"
+                title="Cetak atau simpan sebagai PDF"
+              >
+                <Printer className="w-3.5 h-3.5 text-plum-600" />
+                <span>Cetak PDF</span>
+              </Button>
+            </div>
           </CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -183,7 +284,7 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredPayments.map((p) => (
+                {paginatedPayments.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <span className="font-mono font-bold text-slate-800 block text-[11px]">
@@ -229,6 +330,15 @@ export const AdminPaymentsTab: React.FC<AdminPaymentsTabProps> = ({
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredPayments.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="transaksi"
+          />
         </Card>
       )}
 

@@ -11,6 +11,7 @@ import { adminService } from './adminService'
 import { AdminOverviewTab } from './AdminOverviewTab'
 import { AdminBookingsTab } from './AdminBookingsTab'
 import { AdminPaymentsTab } from './AdminPaymentsTab'
+import { AdminReportsTab } from './AdminReportsTab'
 import { AdminStaffTab } from './AdminStaffTab'
 import { AdminAuditLogsTab } from './AdminAuditLogsTab'
 import { AdminCmsServices } from './AdminCmsServices'
@@ -18,11 +19,13 @@ import { AdminCmsPsychologists } from './AdminCmsPsychologists'
 import { AdminCmsFaqs } from './AdminCmsFaqs'
 import { AdminCmsSettings } from './AdminCmsSettings'
 import { AdminCmsLanding } from './AdminCmsLanding'
+import { AccountProfileSecurity } from '@/components/dashboard/AccountProfileSecurity'
 import type { AdminTab } from './types'
 import {
   LayoutDashboard,
   CalendarDays,
   CreditCard,
+  FileSpreadsheet,
   FileText,
   Users,
   Shield,
@@ -30,6 +33,7 @@ import {
   HelpCircle,
   Settings,
   Globe,
+  UserCheck,
 } from 'lucide-react'
 
 export const AdminDashboardPage: React.FC = () => {
@@ -112,6 +116,11 @@ export const AdminDashboardPage: React.FC = () => {
           badge: pendingGatewayPayments,
           badgeTone: 'amber',
         },
+        {
+          key: 'reports',
+          label: 'Laporan & Rekapitulasi',
+          icon: FileSpreadsheet,
+        },
       ],
     },
     {
@@ -129,6 +138,7 @@ export const AdminDashboardPage: React.FC = () => {
       items: [
         { key: 'staff', label: 'Staf & Otoritas', icon: Shield },
         { key: 'audit-logs', label: 'Jejak Audit', icon: Activity },
+        { key: 'profile', label: 'Profil & Keamanan', icon: UserCheck },
       ],
     },
   ]
@@ -215,6 +225,22 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'reports' && (
+        <div className="space-y-5">
+          <DashboardSubHeader
+            eyebrow="Eksekutif"
+            title="Laporan &"
+            accent="Rekapitulasi"
+            description="Ekspor data operasional dan keuangan ke format Excel (.xls) dan PDF resmi berstandar klinis."
+          />
+          <AdminReportsTab
+            bookings={bookings}
+            payments={payments}
+            userName={profile?.full_name || 'Administrator'}
+          />
+        </div>
+      )}
+
       {activeTab === 'landing' && <AdminCmsLanding />}
       {activeTab === 'services' && <AdminCmsServices />}
       {activeTab === 'psychologists' && <AdminCmsPsychologists />}
@@ -249,6 +275,28 @@ export const AdminDashboardPage: React.FC = () => {
 
       {activeTab === 'faqs' && <AdminCmsFaqs />}
       {activeTab === 'settings' && <AdminCmsSettings />}
+
+      {activeTab === 'profile' && user && (
+        <div className="space-y-5">
+          <DashboardSubHeader
+            eyebrow="Akun Pengelola"
+            title="Profil &"
+            accent="Keamanan Akses"
+            description="Perbarui informasi identitas staf dan kelola kata sandi akun administratif Anda."
+          />
+          <AccountProfileSecurity
+            userId={user.id}
+            initialFullName={profile?.full_name || ''}
+            initialPhone={profile?.phone_number || ''}
+            userEmail={user.email || ''}
+            roleLabel={role === 'super_admin' ? 'Super Admin' : 'Admin'}
+            avatarUrl={profile?.avatar_url}
+            onProfileUpdated={() => {
+              // trigger refresh
+            }}
+          />
+        </div>
+      )}
     </DashboardShell>
   )
 }

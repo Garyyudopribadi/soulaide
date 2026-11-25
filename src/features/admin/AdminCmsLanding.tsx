@@ -202,7 +202,7 @@ export const AdminCmsLanding: React.FC = () => {
       options.onSuccess(res.url)
       showNotification(
         'success',
-        `Aset berhasil dikonversi ke WebP dan disimpan (${res.sizeSavedKb > 0 ? `hemat ${res.sizeSavedKb} KB` : 'teroptimasi'}).`
+        `Aset berhasil disimpan (${res.sizeSavedKb > 0 ? `hemat ${res.sizeSavedKb} KB` : 'teroptimasi'}).`
       )
     } catch (err) {
       showNotification('error', err instanceof Error ? err.message : 'Gagal mengunggah file')
@@ -309,7 +309,7 @@ export const AdminCmsLanding: React.FC = () => {
             Manajemen Konten &amp; Aset Landing Page
           </h2>
           <p className="text-xs text-ink-muted">
-            Kelola teks, foto teroptimasi WebP, video loop, embed peta klinik, dan media sosial resmi.
+            Kelola teks, foto teroptimasi, video loop, embed peta klinik, dan media sosial resmi.
           </p>
         </div>
       </div>
@@ -519,7 +519,7 @@ export const AdminCmsLanding: React.FC = () => {
                     <div>
                       <h4 className="text-xs font-bold text-ink">Logo Resmi Soulaide Psi Arc</h4>
                       <p className="text-[11px] text-ink-muted">
-                        Format WebP transparan tersimpan di bucket Supabase `landing/`.
+                        Format transparan tersimpan aman di direktori brand.
                       </p>
                     </div>
                   </div>
@@ -682,7 +682,7 @@ export const AdminCmsLanding: React.FC = () => {
                 <div className="p-4 rounded-xl bg-sanctuary-100 border border-line space-y-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-ink">
                     <ImageIcon className="w-4 h-4 text-plum-600" />
-                    <span>Gambar Filosofi (WebP)</span>
+                    <span>Gambar Filosofi</span>
                   </div>
                   <div className="w-full h-36 rounded-lg overflow-hidden bg-white border border-line">
                     <img
@@ -828,7 +828,7 @@ export const AdminCmsLanding: React.FC = () => {
                       <span>Video Header &amp; Filosofi</span>
                     </label>
                     <p className="text-[11px] text-ink-muted">
-                      Mendukung video langsung dari Storage Supabase, upload berkas video baru (.mp4, .webm), atau link video YouTube.
+                      Mendukung video langsung dari galeri media cloud, upload berkas video baru (.mp4, .webm), atau link video YouTube.
                     </p>
                   </div>
                 </div>

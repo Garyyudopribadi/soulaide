@@ -3,6 +3,8 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/EmptyState';
+import { Pagination } from '@/components/shared/Pagination';
+import { exportToExcelXml, printPdfReport } from '@/lib/exportUtils';
 import { PaymentStatusBadge } from '@/features/payments/PaymentStatusBadge';
 import {
   Search,
@@ -14,6 +16,8 @@ import {
   MapPin,
   Calendar,
   Clock,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 import type { AdminBookingItem } from './types';
 import { adminService } from './adminService';
@@ -34,6 +38,8 @@ export const AdminBookingsTab: React.FC<AdminBookingsTabProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [reassignBooking, setReassignBooking] = useState<AdminBookingItem | null>(null);
   const [targetPsychologistId, setTargetPsychologistId] = useState('');
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -55,6 +61,89 @@ export const AdminBookingsTab: React.FC<AdminBookingsTabProps> = ({
       return true;
     });
   }, [bookings, statusFilter, methodFilter, searchQuery]);
+
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
+
+  const handleExportExcel = () => {
+    exportToExcelXml({
+      filename: `Reservasi_Soulaide_${new Date().toISOString().split('T')[0]}`,
+      title: 'DAFTAR RESERVASI & JADWAL OPERASIONAL SESI',
+      subtitle: `Filter: ${statusFilter !== 'all' ? statusFilter : 'Semua'} | Metode: ${methodFilter}`,
+      columns: [
+        { header: 'No', key: '_no', width: 6, align: 'center' },
+        { header: 'Kode Booking', key: 'booking_code', width: 14 },
+        { header: 'Tanggal', key: 'session_date', width: 12, align: 'center' },
+        { header: 'Waktu (WIB)', key: 'session_time', width: 14, align: 'center' },
+        { header: 'Klien', key: 'client_name', width: 22 },
+        { header: 'Kontak', key: 'client_phone', width: 16 },
+        { header: 'Layanan', key: 'service_name', width: 22 },
+        { header: 'Metode', key: 'delivery_method', width: 12, align: 'center' },
+        { header: 'Psikolog', key: 'psychologist_name', width: 22 },
+        { header: 'Tarif', key: 'price_formatted', width: 14, align: 'right' },
+        { header: 'Status', key: 'status_label', width: 16, align: 'center' },
+      ],
+      data: filteredBookings.map((b, idx) => {
+        const price =
+          b.delivery_method === 'offline'
+            ? b.service.price_offline || 350000
+            : b.service.price_online || 110000;
+        return {
+          _no: idx + 1,
+          booking_code: b.booking_code,
+          session_date: b.session_date,
+          session_time: `${b.session_start_time.slice(0, 5)} - ${b.session_end_time.slice(0, 5)}`,
+          client_name: b.customer.full_name,
+          client_phone: b.customer.phone_number || '-',
+          service_name: b.service.name,
+          delivery_method: b.delivery_method === 'offline' ? 'Tatap Muka' : 'Online',
+          psychologist_name: b.psychologist.full_name,
+          price_formatted: formatIDR(price),
+          status_label: b.status,
+        };
+      }),
+    });
+  };
+
+  const handlePrintPdf = () => {
+    printPdfReport({
+      filename: `Reservasi_Soulaide_${new Date().toISOString().split('T')[0]}`,
+      title: 'DAFTAR RESERVASI & JADWAL OPERASIONAL SESI',
+      subtitle: `Rekapitulasi Reservasi Operasional Klinik Soulaide`,
+      columns: [
+        { header: 'No', key: '_no', align: 'center', width: 4 },
+        { header: 'Kode', key: 'booking_code', width: 12 },
+        { header: 'Tanggal', key: 'session_date', align: 'center', width: 10 },
+        { header: 'Waktu', key: 'session_time', align: 'center', width: 10 },
+        { header: 'Klien', key: 'client_name', width: 16 },
+        { header: 'Layanan', key: 'service_name', width: 16 },
+        { header: 'Metode', key: 'delivery_method', align: 'center', width: 10 },
+        { header: 'Psikolog', key: 'psychologist_name', width: 18 },
+        { header: 'Tarif', key: 'price_formatted', align: 'right', width: 12 },
+        { header: 'Status', key: 'status_label', align: 'center', width: 12 },
+      ],
+      data: filteredBookings.map((b, idx) => {
+        const price =
+          b.delivery_method === 'offline'
+            ? b.service.price_offline || 350000
+            : b.service.price_online || 110000;
+        return {
+          _no: idx + 1,
+          booking_code: b.booking_code,
+          session_date: b.session_date,
+          session_time: `${b.session_start_time.slice(0, 5)} - ${b.session_end_time.slice(0, 5)}`,
+          client_name: b.customer.full_name,
+          service_name: b.service.name,
+          delivery_method: b.delivery_method === 'offline' ? 'Tatap Muka' : 'Online',
+          psychologist_name: b.psychologist.full_name,
+          price_formatted: formatIDR(price),
+          status_label: b.status.replace('_', ' '),
+        };
+      }),
+    });
+  };
 
   const handleUpdateStatus = async (bookingId: string, newStatus: BookingStatus) => {
     if (!window.confirm(`Ubah status booking menjadi '${newStatus}'?`)) return;
@@ -167,11 +256,33 @@ export const AdminBookingsTab: React.FC<AdminBookingsTabProps> = ({
         />
       ) : (
         <Card className="overflow-hidden border-slate-200 shadow-sm">
-          <CardHeader className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+          <CardHeader className="p-3.5 sm:p-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-plum-600" />
               <span>Daftar Pemesanan & Status Operasional ({filteredBookings.length})</span>
             </CardTitle>
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleExportExcel}
+                className="h-7 text-xs gap-1.5 text-slate-700 hover:text-emerald-700"
+                title="Ekspor ke format Excel (.xls)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Export Excel</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePrintPdf}
+                className="h-7 text-xs gap-1.5 text-slate-700 hover:text-plum-700"
+                title="Cetak atau simpan sebagai PDF"
+              >
+                <Printer className="w-3.5 h-3.5 text-plum-600" />
+                <span>Cetak PDF</span>
+              </Button>
+            </div>
           </CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -187,7 +298,7 @@ export const AdminBookingsTab: React.FC<AdminBookingsTabProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredBookings.map((b) => (
+                {paginatedBookings.map((b) => (
                   <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
                     {/* Code & Schedule */}
                     <td className="py-3.5 px-4">
@@ -307,6 +418,15 @@ export const AdminBookingsTab: React.FC<AdminBookingsTabProps> = ({
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredBookings.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 25, 50, 100]}
+            itemLabel="pemesanan"
+          />
         </Card>
       )}
 

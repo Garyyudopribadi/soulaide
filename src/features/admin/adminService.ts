@@ -288,7 +288,7 @@ export const adminService = {
     const userIds = roles.map((r) => r.user_id);
     const { data: profiles } = await supabase
       .from('Soulaide_profiles')
-      .select('id, full_name, email')
+      .select('id, full_name, email, phone_number, avatar_url')
       .in('id', userIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
@@ -300,6 +300,8 @@ export const adminService = {
         user_id: r.user_id,
         email: prof?.email || null,
         full_name: prof?.full_name || 'Pengguna Soulaide',
+        phone_number: prof?.phone_number || null,
+        avatar_url: prof?.avatar_url || null,
         role: r.role as UserRole,
         created_at: r.created_at,
       };
@@ -376,14 +378,24 @@ export const adminService = {
     userId: string;
     fullName?: string;
     email?: string;
+    phoneNumber?: string;
+    avatarUrl?: string | null;
     newRole?: UserRole;
   }): Promise<void> {
-    if (params.fullName || params.email) {
-      const payload: { updated_at: string; full_name?: string; email?: string } = {
+    if (params.fullName || params.email || params.phoneNumber !== undefined || params.avatarUrl !== undefined) {
+      const payload: {
+        updated_at: string;
+        full_name?: string;
+        email?: string;
+        phone_number?: string | null;
+        avatar_url?: string | null;
+      } = {
         updated_at: new Date().toISOString(),
       };
       if (params.fullName) payload.full_name = params.fullName;
       if (params.email) payload.email = params.email;
+      if (params.phoneNumber !== undefined) payload.phone_number = params.phoneNumber || null;
+      if (params.avatarUrl !== undefined) payload.avatar_url = params.avatarUrl || null;
 
       await supabase.from('Soulaide_profiles').update(payload).eq('id', params.userId);
     }
@@ -420,6 +432,25 @@ export const adminService = {
 
     await adminService.recordAuditLog('USER_ROLE_UPDATED', 'user_role', userId, {
       new_role: newRole,
+    });
+  },
+
+  /**
+   * Delete staff member / revoke staff authority
+   */
+  async deleteStaffMember(roleRecordId: string, userId: string, staffName: string): Promise<void> {
+    const { error } = await supabase
+      .from('Soulaide_user_roles')
+      .delete()
+      .eq('id', roleRecordId);
+
+    if (error) {
+      throw new Error(`Gagal menghapus data otoritas staf: ${error.message}`);
+    }
+
+    await adminService.recordAuditLog('STAFF_MEMBER_DELETED', 'staff', userId, {
+      name: staffName,
+      role_record_id: roleRecordId,
     });
   },
 

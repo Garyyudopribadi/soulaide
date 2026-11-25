@@ -203,3 +203,51 @@ describe('Financial Refund Validation Rules', () => {
     expect(res.error).toContain('lebih besar dari 0');
   });
 });
+
+describe('Pagination Logic & Boundary Math', () => {
+  it('correctly calculates total pages and item slices', () => {
+    const totalItems = 45;
+    const pageSize = 10;
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    expect(totalPages).toBe(5);
+
+    const getSlice = (page: number) => {
+      const start = (page - 1) * pageSize;
+      return { start, end: Math.min(start + pageSize, totalItems) };
+    };
+
+    expect(getSlice(1)).toEqual({ start: 0, end: 10 });
+    expect(getSlice(5)).toEqual({ start: 40, end: 45 });
+  });
+
+  it('handles empty lists gracefully with zero boundaries', () => {
+    const totalItems = 0;
+    const pageSize = 10;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    expect(totalPages).toBe(1);
+  });
+});
+
+describe('Report Export Content & Sanitization', () => {
+  it('prepares clean CSV row content without corruption', () => {
+    const columns = [
+      { header: 'Kode', key: 'code' },
+      { header: 'Klien', key: 'client' },
+      { header: 'Biaya', key: 'amount' },
+    ];
+    const data = [
+      { code: 'SLD-01', client: 'Budi, S.Kom.', amount: 150000 },
+      { code: 'SLD-02', client: 'Citra "Ayu"', amount: 200000 },
+    ];
+
+    const headerRow = columns.map((col) => `"${col.header.replace(/"/g, '""')}"`).join(';');
+    expect(headerRow).toBe('"Kode";"Klien";"Biaya"');
+
+    const firstRow = columns.map((col) => `"${String(data[0][col.key as keyof typeof data[0]]).replace(/"/g, '""')}"`).join(';');
+    expect(firstRow).toBe('"SLD-01";"Budi, S.Kom.";"150000"');
+
+    const secondRow = columns.map((col) => `"${String(data[1][col.key as keyof typeof data[1]]).replace(/"/g, '""')}"`).join(';');
+    expect(secondRow).toBe('"SLD-02";"Citra ""Ayu""";"200000"');
+  });
+});

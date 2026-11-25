@@ -30,6 +30,7 @@ export type ProfessionalTier = 'Soul Guidance' | 'Soul Expert'
 
 export interface PsychologistProfile {
   id: string
+  slug?: string
   fullName: string
   credentials: string
   experienceYears: string
