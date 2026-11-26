@@ -81,15 +81,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true
 
     // Check active session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (!mounted) return
       setSession(currentSession)
       setUser(currentSession?.user ?? null)
 
       if (currentSession?.user) {
-        fetchProfileAndRole(currentSession.user.id).finally(() => {
+        try {
+          await fetchProfileAndRole(currentSession.user.id)
+        } finally {
           if (mounted) setLoading(false)
-        })
+        }
       } else {
         setLoading(false)
       }
@@ -99,18 +101,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth state changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
+      async (event, newSession) => {
         if (!mounted) return
         setSession(newSession)
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          await fetchProfileAndRole(newSession.user.id)
+          // If sign in just occurred, keep loading true until role is fully resolved
+          if (event === 'SIGNED_IN') {
+            setLoading(true)
+          }
+          try {
+            await fetchProfileAndRole(newSession.user.id)
+          } finally {
+            if (mounted) setLoading(false)
+          }
         } else {
           setProfile(null)
           setRole(null)
+          setLoading(false)
         }
-        setLoading(false)
       }
     )
 

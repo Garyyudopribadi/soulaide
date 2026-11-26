@@ -39,8 +39,8 @@ export const adminService = {
       confirmedBookings,
       pendingPayments,
       totalRevenue,
-      verifiedPsychologists: psychsRes.count || 4,
-      activeServices: (servicesRes.count !== null && servicesRes.count !== undefined && servicesRes.count > 0) ? servicesRes.count : 3,
+      verifiedPsychologists: psychsRes.count ?? 0,
+      activeServices: servicesRes.count ?? 0,
     };
   },
 

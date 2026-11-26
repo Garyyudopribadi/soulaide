@@ -27,8 +27,14 @@ export const LoginPage: React.FC = () => {
           destination = from
         } else if (from.startsWith('/psychologist') && (role === 'psychologist' || role === 'super_admin')) {
           destination = from
-        } else if (from.startsWith('/dashboard') && (role === 'customer' || role === 'super_admin')) {
-          destination = from
+        } else if (from.startsWith('/dashboard')) {
+          if (role === 'admin' || role === 'super_admin') {
+            destination = '/admin'
+          } else if (role === 'psychologist') {
+            destination = '/psychologist'
+          } else {
+            destination = from
+          }
         } else if (!from.startsWith('/admin') && !from.startsWith('/psychologist') && !from.startsWith('/dashboard')) {
           destination = from
         }
@@ -51,7 +57,7 @@ export const LoginPage: React.FC = () => {
       if (error) {
         setErrorMessage(error.message)
       } else if (data.user) {
-        // Explicitly pass data.user.id to fetch and receive the resolved role immediately
+        // Explicitly fetch and receive the resolved role immediately before navigating
         const resolvedRole = await refreshProfile(data.user.id)
 
         const from = (location.state as { from?: { pathname: string } })?.from?.pathname
@@ -67,7 +73,13 @@ export const LoginPage: React.FC = () => {
               destination = from
             }
           } else if (from.startsWith('/dashboard')) {
-            if (resolvedRole === 'customer' || resolvedRole === 'super_admin') {
+            // If the user is an admin or psychologist, do NOT send them to customer /dashboard
+            // unless they are purely a customer
+            if (resolvedRole === 'admin' || resolvedRole === 'super_admin') {
+              destination = '/admin'
+            } else if (resolvedRole === 'psychologist') {
+              destination = '/psychologist'
+            } else {
               destination = from
             }
           } else {
